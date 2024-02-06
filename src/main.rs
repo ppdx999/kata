@@ -1,4 +1,6 @@
 fn main() -> Result<(), std::io::Error> {
-    println!("Hello, world!");
-    Err(std::io::Error::new(std::io::ErrorKind::Other, "An error occurred"))
+    let schema = std::env::args().nth(1).expect("No schema provided");
+
+    println!("schema: {}", schema);
+    Ok(())
 }
