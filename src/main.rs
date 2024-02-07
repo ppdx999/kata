@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq)]
-enum PrimitiveType {
+enum Type {
     Integer,
     Float,
     String,
@@ -7,29 +7,29 @@ enum PrimitiveType {
 }
 
 
-fn parse_schema(schema: &str) -> Result<PrimitiveType, String> {
+fn parse_schema(schema: &str) -> Result<Type, String> {
     let inputs = schema.split(":").collect::<Vec<&str>>();
     let type_name = inputs[1].to_lowercase();
 
     match type_name.as_str() {
-        "integer" => Ok(PrimitiveType::Integer),
-        "float" => Ok(PrimitiveType::Float),
-        "string" => Ok(PrimitiveType::String),
-        "boolean" => Ok(PrimitiveType::Boolean),
+        "integer" => Ok(Type::Integer),
+        "float" => Ok(Type::Float),
+        "string" => Ok(Type::String),
+        "boolean" => Ok(Type::Boolean),
         _ => Err(format!("Invalid type: {}", type_name)),
     }
 }
 
-fn validate(t: &PrimitiveType, value: &str) -> Result<(), String> {
+fn validate(t: &Type, value: &str) -> Result<(), String> {
     match t {
-        PrimitiveType::Integer => {
+        Type::Integer => {
             value.parse::<i64>().map(|_| ()).map_err(|e| e.to_string())
         }
-        PrimitiveType::Float => {
+        Type::Float => {
             value.parse::<f64>().map(|_| ()).map_err(|e| e.to_string())
         }
-        PrimitiveType::String => Ok(()),
-        PrimitiveType::Boolean => {
+        Type::String => Ok(()),
+        Type::Boolean => {
             match value.to_lowercase().as_str() {
                 "true" | "false" => Ok(()),
                 _ => Err(format!("Invalid boolean: {}", value)),
@@ -51,10 +51,11 @@ fn main() -> Result<(), String> {
 #[test]
 fn test_parse_schema() {
     // correct schema
-    assert_eq!(parse_schema("id:integer").unwrap(), PrimitiveType::Integer);
-    assert_eq!(parse_schema("name:string").unwrap(), PrimitiveType::String);
-    assert_eq!(parse_schema("is_active:boolean").unwrap(), PrimitiveType::Boolean );
-    assert_eq!(parse_schema("price:float").unwrap(), PrimitiveType::Float);
+    assert_eq!(parse_schema("id:integer").unwrap(), Type::Integer);
+    assert_eq!(parse_schema("name:string").unwrap(), Type::String);
+    assert_eq!(parse_schema("is_active:boolean").unwrap(), Type::Boolean );
+    assert_eq!(parse_schema("price:float").unwrap(), Type::Float);
+    assert_eq!(parse_schema("price:FLOAT").unwrap(), Type::Float);
 
     // incorrect schema
     assert_eq!(parse_schema("id:binary").unwrap_err(), "Invalid type: binary");
