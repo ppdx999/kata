@@ -1,3 +1,5 @@
+use std::io::{stdin, BufReader, BufRead};
+
 #[derive(Debug, PartialEq)]
 enum Type {
     Integer,
@@ -6,57 +8,139 @@ enum Type {
     Boolean,
 }
 
+#[derive(Debug, PartialEq)]
+struct Term {
+    name: String,
+    type_: Type,
+}
 
-fn parse_schema(schema: &str) -> Result<Type, String> {
-    let inputs = schema.split(":").collect::<Vec<&str>>();
-    let type_name = inputs[1].to_lowercase();
+impl Term {
+    fn new(name: &str, type_: Type) -> Term {
+        Term {
+            name: name.to_string(),
+            type_,
+        }
+    }
 
-    match type_name.as_str() {
-        "integer" => Ok(Type::Integer),
-        "float" => Ok(Type::Float),
-        "string" => Ok(Type::String),
-        "boolean" => Ok(Type::Boolean),
-        _ => Err(format!("Invalid type: {}", type_name)),
+    fn from_text(text: &str) -> Result<Term, String> {
+        let inputs = text.split(":").collect::<Vec<&str>>();
+        let name = inputs[0].to_string();
+        let type_ = inputs[1].to_lowercase();
+
+        let type_ = match type_.as_str() {
+            "integer" => Type::Integer,
+            "float" => Type::Float,
+            "string" => Type::String,
+            "boolean" => Type::Boolean,
+            _ => return Err(format!("Invalid type: {}", type_)),
+        };
+
+        Ok(Term::new(name.as_str(), type_))
     }
 }
 
-fn validate(t: &Type, value: &str) -> Result<(), String> {
-    match t {
-        Type::Integer => {
-            value.parse::<i64>().map(|_| ()).map_err(|e| e.to_string())
+#[derive(Debug, PartialEq)]
+struct Schema {
+    terms: Vec<Term>,
+}
+
+impl Schema {
+    fn new() -> Schema {
+        Schema { terms: vec![] }
+    }
+
+    fn add_term(self: &mut Schema, term: Term) {
+        self.terms.push(term);
+    }
+
+    fn from_text(text: &str) -> Result<Schema, String> {
+        let mut schema = Schema::new();
+        let terms = text.split(" ").collect::<Vec<&str>>();
+
+        for term in terms {
+            let term = Term::from_text(term)?;
+            schema.add_term(term);
         }
-        Type::Float => {
-            value.parse::<f64>().map(|_| ()).map_err(|e| e.to_string())
-        }
-        Type::String => Ok(()),
-        Type::Boolean => {
-            match value.to_lowercase().as_str() {
-                "true" | "false" => Ok(()),
-                _ => Err(format!("Invalid boolean: {}", value)),
+
+        Ok(schema)
+    }
+}
+
+fn validate(schema: &Schema, line: &str) -> Result<(), String> {
+    let values = line.split(" ").collect::<Vec<&str>>();
+
+    if values.len() != schema.terms.len() {
+        return Err(format!("Invalid number of values: {}", values.len()));
+    }
+
+    for (i, value) in values.iter().enumerate() {
+        let term = &schema.terms[i];
+        match term.type_ {
+            Type::Integer => {
+                value.parse::<i64>().map(|_| ()).map_err(|e| e.to_string())?;
+            }
+            Type::Float => {
+                value.parse::<f64>().map(|_| ()).map_err(|e| e.to_string())?;
+            }
+            Type::String => {}
+            Type::Boolean => {
+                match value.to_lowercase().as_str() {
+                    "true" | "false" => {}
+                    _ => return Err(format!("Invalid boolean: {}", value)),
+                }
             }
         }
     }
+
+    Ok(())
 }
 
 fn main() -> Result<(), String> {
     let args = std::env::args().collect::<Vec<String>>();
-    let schema = args[1].as_str();
-    let inputs = args[2..].to_vec();
+    let schema = Schema::from_text(args[1].as_str())?;
 
-    let primitive_type = parse_schema(&schema)?;
-    validate(&primitive_type, inputs[0].as_str())
+    // reader from file or stdin
+    let reader: Box<dyn BufRead> = match args.get(2) {
+        Some(file_name) => Box::new(BufReader::new(std::fs::File::open(file_name).unwrap())),
+        None => Box::new(BufReader::new(stdin())),
+    };
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        validate(&schema, line.as_str())?;
+    }
+
+    Ok(())
 }
 
 
 #[test]
-fn test_parse_schema() {
+fn test_term_from_text() {
     // correct schema
-    assert_eq!(parse_schema("id:integer").unwrap(), Type::Integer);
-    assert_eq!(parse_schema("name:string").unwrap(), Type::String);
-    assert_eq!(parse_schema("is_active:boolean").unwrap(), Type::Boolean );
-    assert_eq!(parse_schema("price:float").unwrap(), Type::Float);
-    assert_eq!(parse_schema("price:FLOAT").unwrap(), Type::Float);
+    assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", Type::Integer));
+    assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", Type::String));
+    assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", Type::Boolean));
+    assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", Type::Float));
+    assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", Type::Float));
 
     // incorrect schema
-    assert_eq!(parse_schema("id:binary").unwrap_err(), "Invalid type: binary");
+    assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
 }
+
+
+#[test]
+fn test_schema_from_text() {
+    // correct schema
+    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float").unwrap(), Schema {
+        terms: vec![
+            Term::new("id", Type::Integer),
+            Term::new("name", Type::String),
+            Term::new("is_active", Type::Boolean),
+            Term::new("price", Type::Float),
+        ]
+    });
+
+    // incorrect schema
+    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float err:extra").unwrap_err(), "Invalid type: extra");
+}
+
