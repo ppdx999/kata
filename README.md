@@ -4,7 +4,10 @@ Declarative type checking commands
 # Usage
 
 ```shell
-kata <schema> <input>
+kata <schema> [FILE]
+
+FILE:
+   if you omit this field, kata read from stdin
 ```
 
 # Example
