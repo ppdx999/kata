@@ -3,7 +3,7 @@ Declarative type checking commands
 
 # Usage
 
-```shell
+```txt
 kata <schema> [FILE]
 
 FILE:
