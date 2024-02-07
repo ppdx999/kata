@@ -24,6 +24,9 @@ impl Term {
 
     fn from_text(text: &str) -> Result<Term, String> {
         let inputs = text.split(":").collect::<Vec<&str>>();
+        if inputs.len() != 2 {
+            return Err(format!("Invalid term: {}", text));
+        }
         let name = inputs[0].to_string();
         let type_ = inputs[1].to_lowercase();
 
@@ -125,6 +128,7 @@ fn test_term_from_text() {
 
     // incorrect schema
     assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
+    assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
 }
 
 
