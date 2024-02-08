@@ -58,8 +58,8 @@ impl Schema {
 
     fn from_text(text: &str) -> Result<Schema, String> {
         let mut schema = Schema::new();
-        let terms = text.split(" ").collect::<Vec<&str>>();
 
+        let terms = text.split_whitespace();
         for term in terms {
             let term = Term::from_text(term)?;
             schema.add_term(term);
@@ -70,7 +70,7 @@ impl Schema {
 }
 
 fn validate(schema: &Schema, line: &str) -> Result<(), String> {
-    let values = line.split(" ").collect::<Vec<&str>>();
+    let values = line.split_whitespace().collect::<Vec<&str>>();
 
     if values.len() != schema.terms.len() {
         return Err(format!("Invalid number of values: {}", values.len()));
@@ -144,7 +144,29 @@ fn test_schema_from_text() {
         ]
     });
 
+    // Accept extra space in field separator
+    assert_eq!(Schema::from_text("id:integer \t name:string").unwrap(), Schema {
+        terms: vec![
+            Term::new("id", Type::Integer),
+            Term::new("name", Type::String),
+        ]
+    });
+
     // incorrect schema
     assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float err:extra").unwrap_err(), "Invalid type: extra");
 }
 
+
+#[test]
+fn test_validate() {
+    let schema = Schema::from_text("id:integer name:string is_active:boolean price:float").unwrap();
+
+    // correct values
+    assert_eq!(validate(&schema, "1 john_doe true\t100.0").unwrap(), ());
+
+    // multiple whitespaces
+    assert_eq!(validate(&schema, "1  john_doe  true  100.0").unwrap(), ());
+
+    // incorrect values
+    assert_eq!(validate(&schema, "1 john_doe true 100.0 extra").unwrap_err(), "Invalid number of values: 5");
+}
