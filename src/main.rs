@@ -6,6 +6,7 @@ enum Type {
     Float,
     String,
     Boolean,
+    Null,
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,6 +36,7 @@ impl Term {
             "float" => Type::Float,
             "string" => Type::String,
             "boolean" => Type::Boolean,
+            "null" => Type::Null,
             _ => return Err(format!("Invalid type: {}", type_)),
         };
 
@@ -92,6 +94,11 @@ fn validate(schema: &Schema, line: &str) -> Result<(), String> {
                     _ => return Err(format!("Invalid boolean: {}", value)),
                 }
             }
+            Type::Null => {
+                if *value != "_" {
+                    return Err(format!("Invalid null: {}", value));
+                }
+            }
         }
     }
 
@@ -125,6 +132,7 @@ fn test_term_from_text() {
     assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", Type::Boolean));
     assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", Type::Float));
     assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", Type::Float));
+    assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", Type::Null));
 
     // incorrect schema
     assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
@@ -135,12 +143,13 @@ fn test_term_from_text() {
 #[test]
 fn test_schema_from_text() {
     // correct schema
-    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float").unwrap(), Schema {
+    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null").unwrap(), Schema {
         terms: vec![
             Term::new("id", Type::Integer),
             Term::new("name", Type::String),
             Term::new("is_active", Type::Boolean),
             Term::new("price", Type::Float),
+            Term::new("deleted_field", Type::Null),
         ]
     });
 
@@ -159,14 +168,14 @@ fn test_schema_from_text() {
 
 #[test]
 fn test_validate() {
-    let schema = Schema::from_text("id:integer name:string is_active:boolean price:float").unwrap();
+    let schema = Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null").unwrap();
 
     // correct values
-    assert_eq!(validate(&schema, "1 john_doe true\t100.0").unwrap(), ());
+    assert_eq!(validate(&schema, "1 john_doe true\t100.0 _").unwrap(), ());
 
     // multiple whitespaces
-    assert_eq!(validate(&schema, "1  john_doe  true  100.0").unwrap(), ());
+    assert_eq!(validate(&schema, "1  john_doe  true  100.0  _").unwrap(), ());
 
     // incorrect values
-    assert_eq!(validate(&schema, "1 john_doe true 100.0 extra").unwrap_err(), "Invalid number of values: 5");
+    assert_eq!(validate(&schema, "1 john_doe true 100.0 _ extra").unwrap_err(), "Invalid number of values: 6");
 }
