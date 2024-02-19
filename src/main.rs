@@ -12,14 +12,14 @@ enum Type {
 #[derive(Debug, PartialEq)]
 struct Term {
     name: String,
-    type_: Type,
+    types: Vec<Type>,
 }
 
 impl Term {
-    fn new(name: &str, type_: Type) -> Term {
+    fn new(name: &str, types: Vec<Type>) -> Term {
         Term {
             name: name.to_string(),
-            type_,
+            types,
         }
     }
 
@@ -29,18 +29,20 @@ impl Term {
             return Err(format!("Invalid term: {}", text));
         }
         let name = inputs[0].to_string();
-        let type_ = inputs[1].to_lowercase();
+        let types = inputs[1].to_lowercase();
 
-        let type_ = match type_.as_str() {
-            "integer" => Type::Integer,
-            "float" => Type::Float,
-            "string" => Type::String,
-            "boolean" => Type::Boolean,
-            "null" => Type::Null,
-            _ => return Err(format!("Invalid type: {}", type_)),
-        };
+        let types = types.split("|").map(|type_| {
+            match type_ {
+                "integer" => Ok(Type::Integer),
+                "float" => Ok(Type::Float),
+                "string" => Ok(Type::String),
+                "boolean" => Ok(Type::Boolean),
+                "null" => Ok(Type::Null),
+                _ => return Err(format!("Invalid type: {}", type_)),
+            }
+        }).collect::<Result<Vec<Type>, String>>()?;
 
-        Ok(Term::new(name.as_str(), type_))
+        Ok(Term::new(name.as_str(), types))
     }
 }
 
@@ -80,25 +82,46 @@ fn validate(schema: &Schema, line: &str) -> Result<(), String> {
 
     for (i, value) in values.iter().enumerate() {
         let term = &schema.terms[i];
-        match term.type_ {
-            Type::Integer => {
-                value.parse::<i64>().map(|_| ()).map_err(|e| e.to_string())?;
-            }
-            Type::Float => {
-                value.parse::<f64>().map(|_| ()).map_err(|e| e.to_string())?;
-            }
-            Type::String => {}
-            Type::Boolean => {
-                match value.to_lowercase().as_str() {
-                    "true" | "false" => {}
-                    _ => return Err(format!("Invalid boolean: {}", value)),
+        let mut is_valid = false;
+
+        for type_ in &term.types {
+            match type_ {
+                Type::Integer => {
+                    if value.parse::<i64>().is_ok() {
+                        is_valid = true;
+                        break;
+                    }
+                }
+                Type::Float => {
+                    if value.parse::<f64>().is_ok() {
+                        is_valid = true;
+                        break;
+                    }
+                }
+                Type::String => {
+                    is_valid = true;
+                    break;
+                }
+                Type::Boolean => {
+                    match value.to_lowercase().as_str() {
+                        "true" | "false" => {
+                            is_valid = true;
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                Type::Null => {
+                    if *value == "_" {
+                        is_valid = true;
+                        break;
+                    }
                 }
             }
-            Type::Null => {
-                if *value != "_" {
-                    return Err(format!("Invalid null: {}", value));
-                }
-            }
+        }
+
+        if !is_valid {
+            return Err(format!("Invalid value: {}", value));
         }
     }
 
@@ -127,12 +150,12 @@ fn main() -> Result<(), String> {
 #[test]
 fn test_term_from_text() {
     // correct schema
-    assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", Type::Integer));
-    assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", Type::String));
-    assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", Type::Boolean));
-    assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", Type::Float));
-    assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", Type::Float));
-    assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", Type::Null));
+    assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", vec![Type::Integer]));
+    assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", vec![Type::String]));
+    assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", vec![Type::Boolean]));
+    assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", vec![Type::Float]));
+    assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", vec![Type::Float]));
+    assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", vec![Type::Null]));
 
     // incorrect schema
     assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
@@ -143,21 +166,22 @@ fn test_term_from_text() {
 #[test]
 fn test_schema_from_text() {
     // correct schema
-    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null").unwrap(), Schema {
+    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap(), Schema {
         terms: vec![
-            Term::new("id", Type::Integer),
-            Term::new("name", Type::String),
-            Term::new("is_active", Type::Boolean),
-            Term::new("price", Type::Float),
-            Term::new("deleted_field", Type::Null),
+            Term::new("id", vec![Type::Integer]),
+            Term::new("name", vec![Type::String]),
+            Term::new("is_active", vec![Type::Boolean]),
+            Term::new("price", vec![Type::Float]),
+            Term::new("deleted_field", vec![Type::Null]),
+            Term::new("optional_field", vec![Type::String, Type::Null]),
         ]
     });
 
     // Accept extra space in field separator
     assert_eq!(Schema::from_text("id:integer \t name:string").unwrap(), Schema {
         terms: vec![
-            Term::new("id", Type::Integer),
-            Term::new("name", Type::String),
+            Term::new("id", vec![Type::Integer]),
+            Term::new("name", vec![Type::String]),
         ]
     });
 
@@ -168,14 +192,15 @@ fn test_schema_from_text() {
 
 #[test]
 fn test_validate() {
-    let schema = Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null").unwrap();
+    let schema = Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap();
 
     // correct values
-    assert_eq!(validate(&schema, "1 john_doe true\t100.0 _").unwrap(), ());
+    assert_eq!(validate(&schema, "1 john_doe true\t100.0 _ _").unwrap(), ());
+    assert_eq!(validate(&schema, "1 john_doe true\t100.0 _ text").unwrap(), ());
 
     // multiple whitespaces
-    assert_eq!(validate(&schema, "1  john_doe  true  100.0  _").unwrap(), ());
+    assert_eq!(validate(&schema, "1  john_doe  true  100.0  _ _").unwrap(), ());
 
     // incorrect values
-    assert_eq!(validate(&schema, "1 john_doe true 100.0 _ extra").unwrap_err(), "Invalid number of values: 6");
+    assert_eq!(validate(&schema, "1 john_doe true 100.0 _ _ extra").unwrap_err(), "Invalid number of values: 7");
 }
