@@ -1,10 +1,10 @@
-# kata
+# schematch
 Declarative type checking commands
 
 # Usage
 
 ```txt
-kata <SCHEMA> [<FILE>]
+schematch <SCHEMA> [<FILE>]
 
 SCHEMA:
     A schema is a string that describes the type of each field in the input.
@@ -21,7 +21,7 @@ SCHEMA:
     "id:integer email:string name:string"
 
 FILE:
-   if you omit this field, kata read from stdin
+   if you omit this field, schematch read from stdin
 ```
 
 # Example
@@ -34,13 +34,13 @@ $ cat data.txt
 00002 sherry@example.com Sherry_Berry
 00003 ram@example.com    Ram_Singh
 
-$ cat data.txt | kata "id:integer email:string name:string"
+$ cat data.txt | schematch "id:integer email:string name:string"
 00001 john@example.com   John_Doe
 00002 sherry@example.com Sherry_Berry
 00003 ram@example.com    Ram_Singh
 
 $ echo $?
-0 # this means `kata` command was successful
+0 # this means `schematch` command was successful
 ```
 
 
@@ -53,16 +53,16 @@ $ cat data.txt
 00003 ram@example.com  Ram_Singh
 
 
-$ cat data.txt | kata "id:integer email:string name:string"
+$ cat data.txt | schematch "id:integer email:string name:string"
 00001 john@example.com John_Doe
 00002                  Sherry_Berry
 00003 ram@example.com  Ram_Singh
 
 $ echo $?
-1 # this means `kata` command was unsuccessful
+1 # this means `schematch` command was unsuccessful
 ```
 
-kata never modify the input, it just checks the input against the schema and returns 0 if the input is valid and 1 if the input is invalid.
+schematch never modify the input, it just checks the input against the schema and returns 0 if the input is valid and 1 if the input is invalid.
 
 
 ## Schema EBNF

@@ -1,0 +1,78 @@
+Shema proposal
+
+```
+id:string email:string|null name:string
+```
+
+Now we can validate this data
+
+```
+00001 john@example.com   John_Doe
+00002 sherry@example.com Sherry_Berry
+00003  _     Ram_Singh  # User 00003 doesn't have email
+```
+
+# Schemaの構文
+
+## 現状のBNF
+
+```
+schema    = term ( ' ' term )*
+term      = key ':' primitive
+primitive = 'integer' | 'float' | 'string' | 'boolean' | 'null'
+key       = alphanumeric
+```
+
+## 和型拡張後のBNF
+
+```
+schema = term ( ' ' term )*
+term   = key ':' type
+type   = prim ( '|' prim )*
+prim   = 'integer' | 'float' | 'string' | 'boolean' | 'null'
+key    = alphanumeric
+```
+
+# Inputの構文
+
+```
+lines = line ( '\n' line )* EOF
+line  = field ( ' ' field )*
+field = alphanumeric
+```
+
+## Schemaの作り方
+
+fn is_string()
+fn is_number()
+fn is_null()
+
+を実装
+
+schemaを順番に読み込む
+
+let p: usize = 0;
+let schemas: Vec<Schema> = [];
+
+while p < schma.len() {
+	if is_string() {
+	}
+}
+
+struct Term {
+  name: string
+	prim: Primitive
+}
+
+impl Term {
+	fn validate(field: text) -> Result<(), String>
+}
+
+struct Schema {
+	terms: Vec<Term>,
+}
+
+terms.validate(field) -> Result<(), String>
+
+
+EBNFに合わせて現状のコードをリファクタリングしたい

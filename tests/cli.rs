@@ -3,7 +3,7 @@ use assert_cmd::Command;
 // use predicates::prelude::*;
 // use std::process::Command;
 
-static CMD_NAME: &'static str = "kata";
+static CMD_NAME: &'static str = "schematch";
 
 #[test]
 fn run_program() -> Result<(), Box<dyn std::error::Error>> {
