@@ -1,5 +1,5 @@
 # schematch
-Declarative type checking commands
+Declarative schema checking commands
 
 # Usage
 
