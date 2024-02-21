@@ -4,24 +4,17 @@ Declarative type checking commands
 # Usage
 
 ```txt
-schematch <SCHEMA> [<FILE>]
+Declarative schema checking commands
 
-SCHEMA:
-    A schema is a string that describes the type of each field in the input.
-    The schema is a space separated list of field types. Each field type is
-    a string of the form <name>:<type> where <name> is the name of the field
-    and <type> is the type of the field. The type can be one of the following:
-    - integer
-    - string
-    - float
-    - boolean
-    - null
-    
-    Example:
-    "id:integer email:string name:string"
+Usage: schematch <SCHEMA> [FILE]
 
-FILE:
-   if you omit this field, schematch read from stdin
+Arguments:
+  <SCHEMA>  The schema to check against. ex. "id:integer email:string name:string"
+  [FILE]    The file to check. If not provided, stdin will be used
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
 # Example

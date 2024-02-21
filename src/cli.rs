@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "schematch", version, author, about = "Schema checking tool")]
+#[command(name = "schematch", version, author, about = "Declarative schema checking commands")]
 pub struct Cli {
     /// The schema to check against.
     /// ex. "id:integer email:string name:string"
