@@ -1,5 +1,10 @@
 use std::io::{stdin, BufReader, BufRead};
 
+mod cli;
+
+use clap::Parser;
+use cli::Cli;
+
 #[derive(Debug, PartialEq)]
 enum Type {
     Integer,
@@ -73,6 +78,48 @@ impl Schema {
     }
 }
 
+#[test]
+fn test_term_from_text() {
+    // correct schema
+    assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", vec![Type::Integer]));
+    assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", vec![Type::String]));
+    assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", vec![Type::Boolean]));
+    assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", vec![Type::Float]));
+    assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", vec![Type::Float]));
+    assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", vec![Type::Null]));
+
+    // incorrect schema
+    assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
+    assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
+}
+
+
+#[test]
+fn test_schema_from_text() {
+    // correct schema
+    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap(), Schema {
+        terms: vec![
+            Term::new("id", vec![Type::Integer]),
+            Term::new("name", vec![Type::String]),
+            Term::new("is_active", vec![Type::Boolean]),
+            Term::new("price", vec![Type::Float]),
+            Term::new("deleted_field", vec![Type::Null]),
+            Term::new("optional_field", vec![Type::String, Type::Null]),
+        ]
+    });
+
+    // Accept extra space in field separator
+    assert_eq!(Schema::from_text("id:integer \t name:string").unwrap(), Schema {
+        terms: vec![
+            Term::new("id", vec![Type::Integer]),
+            Term::new("name", vec![Type::String]),
+        ]
+    });
+
+    // incorrect schema
+    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float err:extra").unwrap_err(), "Invalid type: extra");
+}
+
 fn validate(schema: &Schema, line: &str) -> Result<(), String> {
     let values = line.split_whitespace().collect::<Vec<&str>>();
 
@@ -129,11 +176,11 @@ fn validate(schema: &Schema, line: &str) -> Result<(), String> {
 }
 
 fn main() -> Result<(), String> {
-    let args = std::env::args().collect::<Vec<String>>();
-    let schema = Schema::from_text(args[1].as_str())?;
+    let cli = Cli::parse();
+    let schema = Schema::from_text(cli.schema.as_str())?;
 
     // reader from file or stdin
-    let reader: Box<dyn BufRead> = match args.get(2) {
+    let reader: Box<dyn BufRead> = match cli.file {
         Some(file_name) => Box::new(BufReader::new(std::fs::File::open(file_name).unwrap())),
         None => Box::new(BufReader::new(stdin())),
     };
@@ -144,49 +191,6 @@ fn main() -> Result<(), String> {
     }
 
     Ok(())
-}
-
-
-#[test]
-fn test_term_from_text() {
-    // correct schema
-    assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", vec![Type::Integer]));
-    assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", vec![Type::String]));
-    assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", vec![Type::Boolean]));
-    assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", vec![Type::Float]));
-    assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", vec![Type::Float]));
-    assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", vec![Type::Null]));
-
-    // incorrect schema
-    assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
-    assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
-}
-
-
-#[test]
-fn test_schema_from_text() {
-    // correct schema
-    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap(), Schema {
-        terms: vec![
-            Term::new("id", vec![Type::Integer]),
-            Term::new("name", vec![Type::String]),
-            Term::new("is_active", vec![Type::Boolean]),
-            Term::new("price", vec![Type::Float]),
-            Term::new("deleted_field", vec![Type::Null]),
-            Term::new("optional_field", vec![Type::String, Type::Null]),
-        ]
-    });
-
-    // Accept extra space in field separator
-    assert_eq!(Schema::from_text("id:integer \t name:string").unwrap(), Schema {
-        terms: vec![
-            Term::new("id", vec![Type::Integer]),
-            Term::new("name", vec![Type::String]),
-        ]
-    });
-
-    // incorrect schema
-    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float err:extra").unwrap_err(), "Invalid type: extra");
 }
 
 
