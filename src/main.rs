@@ -1,15 +1,17 @@
 use std::io::{stdin, BufReader, BufRead};
 
+mod schema;
 mod cli;
 mod tsv;
+mod json;
 
 use clap::Parser;
 use cli::Cli;
-use tsv::Schema;
+use schema::Schema;
 
 fn main() -> Result<(), String> {
     let cli = Cli::parse();
-    let schema = Schema::from_text(cli.schema.as_str())?;
+    let schema = Schema::from_text(cli.schema_type.to_string().as_str(), cli.schema.as_str())?;
 
     // reader from file or stdin
     let reader: Box<dyn BufRead> = match cli.file {
