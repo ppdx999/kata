@@ -36,7 +36,7 @@ impl Term {
                 "string" => Ok(Type::String),
                 "boolean" => Ok(Type::Boolean),
                 "null" => Ok(Type::Null),
-                _ => return Err(format!("Invalid type: {}", type_)),
+                _ => Err(format!("Invalid type: {}", type_)),
             }
         }).collect::<Result<Vec<Type>, String>>()?;
 
