@@ -19,10 +19,5 @@ fn main() -> Result<(), String> {
         None => Box::new(BufReader::new(stdin())),
     };
 
-    for line in reader.lines() {
-        let line = line.unwrap();
-        schema.validate(line)?;
-    }
-
-    Ok(())
+    schema.validate(reader)
 }

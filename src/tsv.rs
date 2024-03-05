@@ -1,3 +1,5 @@
+use std::io::BufRead;
+
 #[derive(Debug, PartialEq)]
 enum Type {
     Integer,
@@ -70,7 +72,7 @@ impl Schema {
         Ok(schema)
     }
 
-    pub fn validate(self: &Schema, line: String) -> Result<(), String> {
+    fn validate_line(self: &Schema, line: String) -> Result<(), String> {
         let values = line.split_whitespace().collect::<Vec<&str>>();
         if values.len() != self.terms.len() {
             return Err(format!("Invalid number of values: {}", values.len()));
@@ -119,6 +121,14 @@ impl Schema {
         }
         Ok(())
     }
+
+    pub fn validate(self: &Schema, reader: Box<dyn BufRead>) -> Result<(), String> {
+        for line in reader.lines() {
+            let line = line.unwrap();
+            self.validate_line(line)?;
+        }
+        Ok(())
+    }
 }
 
 #[test]
@@ -164,16 +174,16 @@ fn test_schema_from_text() {
 }
 
 #[test]
-fn test_validate() {
+fn test_validate_line() {
     let schema = Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap();
 
     // correct values
-    assert_eq!(schema.validate("1 john_doe true 100.0 _ _".to_owned()).unwrap(), ());
-    assert_eq!(schema.validate("1 john_doe true\t100.0 _ _".to_owned()).unwrap(), ());
+    assert_eq!(schema.validate_line("1 john_doe true 100.0 _ _".to_owned()).unwrap(), ());
+    assert_eq!(schema.validate_line("1 john_doe true\t100.0 _ _".to_owned()).unwrap(), ());
 
     // // multiple whitespaces
-    assert_eq!(schema.validate("1  john_doe  true  100.0  _ _".to_owned()).unwrap(), ());
+    assert_eq!(schema.validate_line("1  john_doe  true  100.0  _ _".to_owned()).unwrap(), ());
 
     // // incorrect values
-    assert_eq!(schema.validate("1 john_doe true 100.0 _ _ extra".to_owned()).unwrap_err(), "Invalid number of values: 7");
+    assert_eq!(schema.validate_line("1 john_doe true 100.0 _ _ extra".to_owned()).unwrap_err(), "Invalid number of values: 7");
 }

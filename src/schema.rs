@@ -1,3 +1,4 @@
+use std::io::BufRead;
 use crate::tsv;
 use crate::json;
 
@@ -14,10 +15,10 @@ impl Schema {
             _ => Err(format!("Unknown schema type: {}", schema_type)),
         }
     }
-    pub fn validate(&self, line: String) -> Result<(), String> {
+    pub fn validate(&self, reader: Box<dyn BufRead>) -> Result<(), String> {
         match self {
-            Schema::Tsv(schema) => schema.validate(line),
-            Schema::Json(schema) => schema.validate(line),
+            Schema::Tsv(schema) => schema.validate(reader),
+            Schema::Json(schema) => schema.validate(reader),
         }
     }
 }

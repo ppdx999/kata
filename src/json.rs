@@ -1,3 +1,5 @@
+use std::io::BufRead;
+
 #[derive(Debug, PartialEq)]
 pub struct Schema {
     root: Node,
@@ -9,7 +11,7 @@ impl Schema {
         Ok(Schema { root: parser.parse() })
     }
 
-    pub fn validate(&self, _line: String) -> Result<(), String> {
+    pub fn validate(&self, _reader: Box<dyn BufRead>) -> Result<(), String> {
         Ok(())
     }
 
