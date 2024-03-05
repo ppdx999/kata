@@ -1,3 +1,6 @@
+> [!WARNING]
+> This project is working on progress.
+
 # schematch
 Declarative schema checking commands
 
