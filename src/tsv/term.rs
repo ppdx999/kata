@@ -86,6 +86,7 @@ impl Term {
         Ok(())
     }
 }
+
 #[test]
 fn test_term_from_text() {
     // correct schema
@@ -99,4 +100,24 @@ fn test_term_from_text() {
     // incorrect schema
     assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
     assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
+}
+
+#[test]
+fn test_validate() {
+    assert_eq!(Term::new("id", vec![Type::Integer]).validate("123"), Ok(()));
+    assert_eq!(Term::new("id", vec![Type::Integer]).validate("123.0"), Err("Invalid value: 123.0".to_string()));
+
+    assert_eq!(Term::new("name", vec![Type::String]).validate("John Doe"), Ok(()));
+
+    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("true"), Ok(()));
+    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("false"), Ok(()));
+    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("TRUE"), Ok(()));
+    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("True"), Ok(()));
+    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("TURE"), Err("Invalid value: TURE".to_string()));
+
+    assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0"), Ok(()));
+    assert_eq!(Term::new("price", vec![Type::Float]).validate("123"), Ok(()));
+    assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0.0"), Err("Invalid value: 123.0.0".to_string()));
+
+    assert_eq!(Term::new("deleted_field", vec![Type::Null]).validate("_"), Ok(()));
 }
