@@ -29,6 +29,7 @@ impl<'a> Lexer<'a> {
             Some('{') => TokenKind::LeftBrace,
             Some('}') => TokenKind::RightBrace,
             Some(':') => TokenKind::Colon,
+            Some(',') => TokenKind::Comma,
             Some(char) if char.is_alphanumeric() => {
                 let mut identifier = char.to_string();
                 loop {
@@ -72,4 +73,25 @@ fn test_simple_object() {
     assert_eq!(lexer.read_next_token().kind, TokenKind::Colon);
     assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("string".to_string()));
     assert_eq!(lexer.read_next_token().kind, TokenKind::RightBrace);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::EOF);
+}
+
+#[test]
+fn test_nested_object() {
+    let mut lexer = Lexer::new("{name: {first: string, last: string}}");
+
+    assert_eq!(lexer.read_next_token().kind, TokenKind::LeftBrace);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("name".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Colon);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::LeftBrace);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("first".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Colon);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("string".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Comma);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("last".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Colon);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("string".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::RightBrace);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::RightBrace);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::EOF);
 }

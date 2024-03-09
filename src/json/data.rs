@@ -8,6 +8,7 @@ pub struct Location {
 pub enum TokenKind {
     Identifier(String),
     Colon,
+    Comma,
     LeftBrace,
     RightBrace,
     EOF,
