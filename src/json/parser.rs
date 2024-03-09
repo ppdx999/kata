@@ -30,17 +30,21 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Node {
-        let node = self.object();
-        self.expect(TokenKind::EOF);
-        node
+        if self.consume(TokenKind::LeftBrace) {
+            let node = self.object();
+            self.expect(TokenKind::RightBrace);
+            self.expect(TokenKind::EOF);
+            node
+        } else {
+            panic!("Unexpected token");
+        }
     }
 
     fn object(&mut self) -> Node {
-        self.expect(TokenKind::LeftBrace);
-        self.expect(TokenKind::RightBrace);
         Node::new(NodeKind::Object)
     }
 }
+
 
 #[test]
 fn test_parser() {
