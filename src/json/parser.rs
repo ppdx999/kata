@@ -8,16 +8,7 @@ pub struct Parser {
 impl Parser {
     pub fn new(text: &str) -> Parser {
         let mut lexer = Lexer::new(text);
-
-        let mut head = lexer.read_next_token();
-        let mut current = &mut head;
-        while current.kind != TokenKind::EOF {
-            let token = lexer.read_next_token();
-            current.next = Some(Box::new(token));
-            current = current.next.as_mut().unwrap();
-        }
-
-        Parser { token: Some(Box::new(head)) }
+        Parser { token: lexer.token() }
     }
 
     fn expect(&mut self, kind: TokenKind) {
