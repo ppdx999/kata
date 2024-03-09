@@ -28,8 +28,23 @@ impl<'a> Lexer<'a> {
         match self.chars.next() {
             Some('{') => TokenKind::LeftBrace,
             Some('}') => TokenKind::RightBrace,
+            Some(':') => TokenKind::Colon,
+            Some(char) if char.is_alphanumeric() => {
+                let mut identifier = char.to_string();
+                loop {
+                    match self.chars.clone().next() {
+                        Some(c) if c.is_alphanumeric() => {
+                            identifier.push(c);
+                            self.chars.next();
+                        }
+                        _ => break,
+                    }
+                }
+                TokenKind::Identifier(identifier)
+            }
+            Some(' ') => self.read_next_token_kind(),
+            Some(char) => panic!("Unexpected character: {}", char),
             None => TokenKind::EOF,
-            _ => panic!("Unexpected character"),
         }
     }
 
@@ -39,10 +54,22 @@ impl<'a> Lexer<'a> {
 }
 
 #[test]
-fn test_lexer() {
+fn test_empty_object() {
     let mut lexer = Lexer::new("{}");
 
     assert_eq!(lexer.read_next_token().kind, TokenKind::LeftBrace);
     assert_eq!(lexer.read_next_token().kind, TokenKind::RightBrace);
     assert_eq!(lexer.read_next_token().kind, TokenKind::EOF);
+}
+
+
+#[test]
+fn test_simple_object() {
+    let mut lexer = Lexer::new("{name: string}");
+
+    assert_eq!(lexer.read_next_token().kind, TokenKind::LeftBrace);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("name".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Colon);
+    assert_eq!(lexer.read_next_token().kind, TokenKind::Identifier("string".to_string()));
+    assert_eq!(lexer.read_next_token().kind, TokenKind::RightBrace);
 }

@@ -6,6 +6,8 @@ pub struct Location {
 
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
+    Identifier(String),
+    Colon,
     LeftBrace,
     RightBrace,
     EOF,
