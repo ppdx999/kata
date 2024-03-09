@@ -42,6 +42,49 @@ impl Term {
 
         Ok(Term::new(name.as_str(), types))
     }
+
+    pub fn validate(&self, value: &str) -> Result<(), String> {
+        let mut is_valid = false;
+        for type_ in &self.types {
+            match type_ {
+                Type::Integer => {
+                    if value.parse::<i64>().is_ok() {
+                        is_valid = true;
+                        break;
+                    }
+                }
+                Type::Float => {
+                    if value.parse::<f64>().is_ok() {
+                        is_valid = true;
+                        break;
+                    }
+                }
+                Type::String => {
+                    is_valid = true;
+                    break;
+                }
+                Type::Boolean => {
+                    match value.to_lowercase().as_str() {
+                        "true" | "false" => {
+                            is_valid = true;
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                Type::Null => {
+                    if value == "_" {
+                        is_valid = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if !is_valid {
+            return Err(format!("Invalid value: {}", value));
+        }
+        Ok(())
+    }
 }
 #[test]
 fn test_term_from_text() {

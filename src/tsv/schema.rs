@@ -1,5 +1,5 @@
 use std::io::BufRead;
-use crate::tsv::term::{Term, Type};
+use crate::tsv::term::Term;
 
 #[derive(Debug, PartialEq)]
 pub struct Schema {
@@ -34,46 +34,10 @@ impl Schema {
         }
         for (i, value) in values.iter().enumerate() {
             let term = &self.terms[i];
-            let mut is_valid = false;
-            for type_ in &term.types {
-                match type_ {
-                    Type::Integer => {
-                        if value.parse::<i64>().is_ok() {
-                            is_valid = true;
-                            break;
-                        }
-                    }
-                    Type::Float => {
-                        if value.parse::<f64>().is_ok() {
-                            is_valid = true;
-                            break;
-                        }
-                    }
-                    Type::String => {
-                        is_valid = true;
-                        break;
-                    }
-                    Type::Boolean => {
-                        match value.to_lowercase().as_str() {
-                            "true" | "false" => {
-                                is_valid = true;
-                                break;
-                            }
-                            _ => {}
-                        }
-                    }
-                    Type::Null => {
-                        if *value == "_" {
-                            is_valid = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if !is_valid {
-                return Err(format!("Invalid value: {}", value));
-            }
+            // TODO: should combined all error messages and return
+            term.validate(value)?;
         }
+
         Ok(())
     }
 
@@ -88,6 +52,7 @@ impl Schema {
 
 #[test]
 fn test_schema_from_text() {
+    use crate::tsv::term::{Term, Type};
     // correct schema
     assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap(), Schema {
         terms: vec![
