@@ -1,4 +1,6 @@
 use std::io::BufRead;
+use serde_json;
+use serde_json::{Map, Value};
 
 #[derive(Debug, PartialEq)]
 pub struct Schema {
@@ -11,10 +13,10 @@ impl Schema {
         Ok(Schema { root: parser.parse() })
     }
 
-    pub fn validate(&self, _reader: Box<dyn BufRead>) -> Result<(), String> {
-        Ok(())
+    pub fn validate(&self, rdr: Box<dyn BufRead>) -> Result<(), String> {
+        let text = rdr.lines().collect::<Result<Vec<String>, _>>().map_err(|e| e.to_string())?.join("\n");
+        Validator::validate(self, &text).map(|_| ())
     }
-
 }
 
 #[test]
@@ -23,6 +25,12 @@ fn test_schema_from_text() {
     assert_eq!(schema, Schema {
         root: Node::new(NodeKind::Object),
     });
+}
+
+#[test]
+fn test_schema_validate() {
+    let schema = Schema::from_text("{}").unwrap();
+    assert!(schema.validate(Box::new("{}".as_bytes())).is_ok());
 }
 
 struct Parser {
@@ -166,4 +174,28 @@ impl Node {
             },
         }
     }
+}
+
+
+#[allow(dead_code)]
+struct Validator;
+
+impl Validator {
+    fn validate(schema: &Schema, text: &str) -> Result<bool, String> {
+        let value: serde_json::Value = serde_json::from_str(text).map_err( |e| e.to_string() )?;
+        match value {
+            Value::Object(object) => Self::object(&schema.root, object),
+            _ => Err("Expected an object".to_string()),
+        }
+    }
+
+    fn object(schema: &Node, object: Map<String, Value>) -> Result<bool, String> {
+        Ok(true)
+    }
+}
+
+#[test]
+fn test_validator() {
+    let schema = Schema::from_text("{}").unwrap();
+    assert!(Validator::validate(&schema, "{}").unwrap());
 }
