@@ -14,7 +14,7 @@ impl Parser {
     fn expect(&mut self, kind: TokenKind) {
         let token = self.token.take().unwrap();
         if token.kind != kind {
-            panic!("Unexpected token");
+            panic!("Unexpected token {:?}", token);
         }
         self.token = token.next;
     }
@@ -36,7 +36,7 @@ impl Parser {
             self.expect(TokenKind::EOF);
             node
         } else {
-            panic!("Unexpected token");
+            panic!("Unexpected token {:?}", self.token);
         }
     }
 
