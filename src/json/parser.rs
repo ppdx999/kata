@@ -19,24 +19,19 @@ impl Parser {
         self.token = token.next;
     }
 
-    fn consume(&mut self, kind: TokenKind) -> bool {
-        if let Some(token) = &self.token {
-            if token.kind == kind {
-                self.token = self.token.take().unwrap().next;
-                return true;
-            }
-        }
-        false
-    }
-
     pub fn parse(&mut self) -> Node {
-        if self.consume(TokenKind::LeftBrace) {
-            let node = self.object();
-            self.expect(TokenKind::RightBrace);
-            self.expect(TokenKind::EOF);
-            node
-        } else {
-            panic!("Unexpected token {:?}", self.token);
+        let token = self.token.take().unwrap();
+        let kind = token.kind;
+        self.token = token.next;
+
+        match kind {
+            TokenKind::LeftBrace => {
+                let node = self.object();
+                self.expect(TokenKind::RightBrace);
+                self.expect(TokenKind::EOF);
+                node
+            }
+            _ => panic!("Unexpected token"),
         }
     }
 
