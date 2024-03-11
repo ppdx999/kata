@@ -1,4 +1,4 @@
-use crate::json::data::{Token, TokenKind, Node, NodeKind};
+use crate::json::data::{Token, TokenKind, Node, NodeKind, Type, Object, Property};
 use crate::json::lexer::Lexer;
 
 pub struct Parser {
@@ -19,30 +19,69 @@ impl Parser {
         self.token = token.next;
     }
 
-    pub fn parse(&mut self) -> Node {
+    fn expect_identifier(&mut self) -> String {
         let token = self.token.take().unwrap();
-        let kind = token.kind;
-        self.token = token.next;
+        if let TokenKind::Identifier(identifier) = token.kind {
+            self.token = token.next;
+            return identifier;
+        }
+        panic!("Unexpected token {:?}", token);
+    }
 
-        match kind {
-            TokenKind::LeftBrace => {
-                let node = self.object();
-                self.expect(TokenKind::RightBrace);
-                self.expect(TokenKind::EOF);
-                node
-            }
-            _ => panic!("Unexpected token"),
+    fn expect_type(&mut self) -> Type {
+        let type_ = self.expect_identifier();
+        match type_.as_str() {
+            "string" => Type::String,
+            _ => panic!("Invalid type: {}", type_),
         }
     }
 
+    fn consume(&mut self, kind: TokenKind) -> bool {
+        if let Some(token) = &self.token {
+            if token.kind == kind {
+                self.token = self.token.take().unwrap().next;
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn parse(&mut self) -> Node {
+        let node = self.object();
+        self.expect(TokenKind::EOF);
+        node
+    }
+
     fn object(&mut self) -> Node {
-        Node::new(NodeKind::Object)
+        let mut object = Object::new();
+        self.expect(TokenKind::LeftBrace);
+        while !self.consume(TokenKind::RightBrace) {
+            let property = self.property();
+            object.properties.push(property);
+        };
+        Node::new(NodeKind::Object(object))
+    }
+
+    fn property(&mut self) -> Property {
+        let name = self.expect_identifier();
+        self.expect(TokenKind::Colon);
+        let type_ = self.expect_type();
+
+        Property::new(name, type_)
     }
 }
 
 
 #[test]
-fn test_parser() {
+fn test_empty_object() {
     let mut parser = Parser::new("{}");
-    assert_eq!(parser.parse(), Node::new(NodeKind::Object));
+    assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object::new())));
+}
+
+#[test]
+fn test_simple_object() {
+    let mut parser = Parser::new("{name: string}");
+    assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object {
+        properties: vec![Property::new("name".to_string(), Type::String)]
+    })));
 }

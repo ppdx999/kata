@@ -22,8 +22,39 @@ pub struct Token {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Type {
+    String
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Property {
+    pub name: String,
+    pub type_: Type,
+}
+
+impl Property {
+    pub fn new(name: String, type_: Type) -> Property {
+        Property {
+            name,
+            type_,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Object {
+    pub properties: Vec<Property>,
+}
+
+impl Object {
+    pub fn new() -> Object {
+        Object { properties: vec![] }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum NodeKind {
-    Object,
+    Object(Object),
 }
 
 #[derive(Debug, PartialEq)]
@@ -32,11 +63,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(kind: NodeKind) -> Self {
-        match kind {
-            NodeKind::Object => Node {
-                kind,
-            },
-        }
+    pub fn new(kind: NodeKind) -> Node {
+        Node { kind }
     }
 }

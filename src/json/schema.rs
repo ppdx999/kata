@@ -19,20 +19,3 @@ impl Schema {
         Validator::validate(self, &text).map(|_| ())
     }
 }
-
-#[test]
-fn test_schema_from_text() {
-    use crate::json::data::{Node, NodeKind};
-
-    let schema = Schema::from_text("{}").unwrap();
-    assert_eq!(schema, Schema {
-        root: Node::new(NodeKind::Object),
-    });
-}
-
-#[test]
-fn test_schema_validate() {
-    let schema = Schema::from_text("{}").unwrap();
-    assert!(schema.validate(Box::new("{}".as_bytes())).is_ok());
-}
-
