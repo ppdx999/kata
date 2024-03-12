@@ -46,26 +46,40 @@ impl Parser {
         false
     }
 
-    pub fn parse(&mut self) -> Node {
-        let node = self.object();
-        self.expect(TokenKind::EOF);
-        node
+    fn peek(&self, kind: TokenKind) -> bool {
+        if let Some(token) = &self.token {
+            return token.kind == kind;
+        }
+        false
     }
 
-    fn object(&mut self) -> Node {
+    pub fn parse(&mut self) -> Node {
+        let object = self.object();
+        self.expect(TokenKind::EOF);
+        Node::new(NodeKind::Object(object))
+    }
+
+    fn object(&mut self) -> Object {
         let mut object = Object::new();
         self.expect(TokenKind::LeftBrace);
         while !self.consume(TokenKind::RightBrace) {
             let property = self.property();
             object.properties.push(property);
+            self.consume(TokenKind::Comma);
         };
-        Node::new(NodeKind::Object(object))
+        object
     }
 
     fn property(&mut self) -> Property {
         let name = self.expect_identifier();
         self.expect(TokenKind::Colon);
-        let type_ = self.expect_type();
+
+        let type_ = if self.peek(TokenKind::LeftBrace) {
+            let object = self.object();
+            Type::Object(Box::new(object))
+        } else {
+            self.expect_type()
+        };
 
         Property::new(name, type_)
     }
@@ -83,5 +97,26 @@ fn test_simple_object() {
     let mut parser = Parser::new("{name: string}");
     assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object {
         properties: vec![Property::new("name".to_string(), Type::String)]
+    })));
+}
+
+
+#[test]
+fn test_nested_object() {
+    let mut parser = Parser::new("{name: string, address: {city: string, country: string}}");
+    assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object {
+        properties: vec![
+            Property::new("name".to_string(), Type::String),
+            Property::new("address".to_string(), Type::Object(
+                Box::new(
+                    Object {
+                        properties: vec![
+                            Property::new("city".to_string(), Type::String),
+                            Property::new("country".to_string(), Type::String),
+                        ]
+                    }
+                )
+            ))
+        ]
     })));
 }

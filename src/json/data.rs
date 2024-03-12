@@ -23,7 +23,8 @@ pub struct Token {
 
 #[derive(Debug, PartialEq)]
 pub enum Type {
-    String
+    String,
+    Object(Box<Object>),
 }
 
 #[derive(Debug, PartialEq)]
