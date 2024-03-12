@@ -1,4 +1,4 @@
-use crate::json::data::{Token, TokenKind, Node, NodeKind, Type, Object, Property};
+use crate::json::data::{Token, TokenKind, Value, Type, Object, Property};
 use crate::json::lexer::Lexer;
 
 pub struct Parser {
@@ -53,10 +53,10 @@ impl Parser {
         false
     }
 
-    pub fn parse(&mut self) -> Node {
+    pub fn parse(&mut self) -> Value {
         let object = self.object();
         self.expect(TokenKind::EOF);
-        Node::new(NodeKind::Object(object))
+        Value::Object(object)
     }
 
     fn object(&mut self) -> Object {
@@ -89,22 +89,22 @@ impl Parser {
 #[test]
 fn test_empty_object() {
     let mut parser = Parser::new("{}");
-    assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object::new())));
+    assert_eq!(parser.parse(), Value::Object(Object::new()));
 }
 
 #[test]
 fn test_simple_object() {
     let mut parser = Parser::new("{name: string}");
-    assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object {
+    assert_eq!(parser.parse(), Value::Object(Object {
         properties: vec![Property::new("name".to_string(), Type::String)]
-    })));
+    }));
 }
 
 
 #[test]
 fn test_nested_object() {
     let mut parser = Parser::new("{name: string, address: {city: string, country: string}}");
-    assert_eq!(parser.parse(), Node::new(NodeKind::Object(Object {
+    assert_eq!(parser.parse(), Value::Object(Object {
         properties: vec![
             Property::new("name".to_string(), Type::String),
             Property::new("address".to_string(), Type::Object(
@@ -118,5 +118,5 @@ fn test_nested_object() {
                 )
             ))
         ]
-    })));
+    }));
 }

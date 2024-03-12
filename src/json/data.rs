@@ -54,17 +54,6 @@ impl Object {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum NodeKind {
+pub enum Value {
     Object(Object),
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Node {
-    pub kind: NodeKind,
-}
-
-impl Node {
-    pub fn new(kind: NodeKind) -> Node {
-        Node { kind }
-    }
 }

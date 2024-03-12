@@ -1,11 +1,11 @@
 use std::io::BufRead;
-use crate::json::data::Node;
+use crate::json::data::Value;
 use crate::json::parser::Parser;
 use crate::json::validator::Validator;
 
 #[derive(Debug, PartialEq)]
 pub struct Schema {
-    pub root: Node,
+    pub root: Value,
 }
 
 impl Schema {
