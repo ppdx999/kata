@@ -16,6 +16,6 @@ impl Schema {
 
     pub fn validate(&self, rdr: Box<dyn BufRead>) -> Result<(), String> {
         let text = rdr.lines().collect::<Result<Vec<String>, _>>().map_err(|e| e.to_string())?.join("\n");
-        Validator::validate(self, &text).map(|_| ())
+        Validator::validate(&self.root, &text).map(|_| ())
     }
 }
