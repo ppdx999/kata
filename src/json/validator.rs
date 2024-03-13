@@ -50,9 +50,17 @@ fn test_empty_object() {
 fn test_simple_object() {
     use crate::json::schema::Schema;
 
-    let schema = Schema::from_text("{name: string}").unwrap();
+    let schema = Schema::from_text("{name: string, email: string}").unwrap();
 
-    assert!(Validator::validate(&schema.root, r#"{"name": "John"}"#).unwrap());
+    assert!(Validator::validate(&schema.root, r#"{"name": "John", "email": "test@example.com"}"#).unwrap());
 
-    assert_eq!(Validator::validate(&schema.root, r#"{"nome": "John"}"#).unwrap_err(), "Property 'name' not found");
+    assert_eq!(Validator::validate(&schema.root, r#"{"nome": "John", "email": "test@example.com"}"#).unwrap_err(), "Property 'name' not found");
+}
+
+#[test]
+fn test_nested_object() {
+    use crate::json::schema::Schema;
+    let schema = Schema::from_text("{address: {street: string}}").unwrap();
+    assert!(Validator::validate(&schema.root, r#"{"address": {"street": "Main St."}}"#).unwrap());
+    assert_eq!(Validator::validate(&schema.root, r#"{"address": {"street": {}}}"#).unwrap_err(), "Expected a string");
 }
