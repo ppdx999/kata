@@ -1,7 +1,9 @@
 use std::io::BufRead;
-use crate::json::data::Value;
-use crate::json::parser::Parser;
-use crate::json::validator::Validator;
+
+use super::data::Value;
+use super::error::{ SchemaErrors, ValidationErrors };
+use super::parser::Parser;
+use super::validator::Validator;
 
 #[derive(Debug, PartialEq)]
 pub struct Schema {
@@ -9,13 +11,16 @@ pub struct Schema {
 }
 
 impl Schema {
-    pub fn from_text(text: &str) -> Result<Self, String> {
-        let mut parser = Parser::new(text);
-        Ok(Schema { root: parser.parse() })
+    pub fn from_text(text: &str) -> Result<Self, SchemaErrors> {
+        let mut parser = Parser::new(text)?;
+        Ok(Schema { root: parser.parse()? })
     }
 
-    pub fn validate(&self, rdr: Box<dyn BufRead>) -> Result<(), String> {
-        let text = rdr.lines().collect::<Result<Vec<String>, _>>().map_err(|e| e.to_string())?.join("\n");
-        Validator::validate(&self.root, &text).map(|_| ())
+    pub fn validate(&self, rdr: Box<dyn BufRead>) -> Result<(), ValidationErrors> {
+        let text = rdr.lines().collect::<Result<Vec<String>, _>>().unwrap().join("\n");
+
+        Validator::validate(&self.root, &text)?;
+
+        Ok(())
     }
 }

@@ -1,3 +1,5 @@
+use super::error::{SchemaError, ValidateLineError};
+
 #[derive(Debug, PartialEq)]
 pub enum Type {
     Integer,
@@ -13,6 +15,18 @@ pub struct Term {
     pub types: Vec<Type>,
 }
 
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Type::Integer => write!(f, "integer"),
+            Type::Float => write!(f, "float"),
+            Type::String => write!(f, "string"),
+            Type::Boolean => write!(f, "boolean"),
+            Type::Null => write!(f, "null"),
+        }
+    }
+}
+
 impl Term {
     pub fn new(name: &str, types: Vec<Type>) -> Term {
         Term {
@@ -21,10 +35,12 @@ impl Term {
         }
     }
 
-    pub fn from_text(text: &str) -> Result<Term, String> {
+    pub fn from_text(text: &str) -> Result<Term, SchemaError> {
         let inputs = text.split(":").collect::<Vec<&str>>();
         if inputs.len() != 2 {
-            return Err(format!("Invalid term: {}", text));
+            return Err(SchemaError::InvalidSyntax{
+                text: text.to_string()
+            });
         }
         let name = inputs[0].to_string();
         let types = inputs[1].to_lowercase();
@@ -36,14 +52,16 @@ impl Term {
                 "string" => Ok(Type::String),
                 "boolean" => Ok(Type::Boolean),
                 "null" => Ok(Type::Null),
-                _ => Err(format!("Invalid type: {}", type_)),
+                _ => Err(SchemaError::InvalidType {
+                    type_: type_.to_string()
+                })
             }
-        }).collect::<Result<Vec<Type>, String>>()?;
+        }).collect::<Result<Vec<Type>, SchemaError>>()?;
 
         Ok(Term::new(name.as_str(), types))
     }
 
-    pub fn validate(&self, value: &str) -> Result<(), String> {
+    pub fn validate(&self, value: &str) -> Result<(), ValidateLineError> {
         let mut is_valid = false;
         for type_ in &self.types {
             match type_ {
@@ -81,7 +99,12 @@ impl Term {
             }
         }
         if !is_valid {
-            return Err(format!("Invalid value: {}", value));
+            return Err(
+                ValidateLineError::DataTypeMismatch {
+                    type_: self.types.iter().map(|type_| type_.to_string()).collect::<Vec<String>>().join(" | "),
+                    value: value.to_string()
+                }
+            );
         }
         Ok(())
     }
@@ -89,7 +112,7 @@ impl Term {
 
 #[cfg(test)]
 mod tests {
-    use crate::tsv::term::{Term, Type};
+    use super::*;
 
     mod term_from_text {
         use super::*;
@@ -114,12 +137,16 @@ mod tests {
 
         #[test]
         fn invalid_type() {
-            assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
+            assert_eq!(Term::from_text("id:unknown").unwrap_err(), SchemaError::InvalidType {
+                type_: "unknown".to_string()
+            });
         }
 
         #[test]
         fn invalid_syntax() {
-            assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
+            assert_eq!(Term::from_text("id").unwrap_err(), SchemaError::InvalidSyntax {
+                text: "id".to_string()
+            });
         }
     }
 
@@ -129,7 +156,13 @@ mod tests {
         #[test]
         fn integer() {
             assert_eq!(Term::new("id", vec![Type::Integer]).validate("123"), Ok(()));
-            assert_eq!(Term::new("id", vec![Type::Integer]).validate("123.0"), Err("Invalid value: 123.0".to_string()));
+            assert_eq!(
+                Term::new("id", vec![Type::Integer]).validate("123.0").unwrap_err(),
+                ValidateLineError::DataTypeMismatch {
+                    type_: "integer".to_string(),
+                    value: "123.0".to_string()
+                }
+            );
         }
 
         #[test]
@@ -141,14 +174,26 @@ mod tests {
         fn boolean() {
             assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("true"), Ok(()));
             assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("false"), Ok(()));
-            assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("TURE"), Err("Invalid value: TURE".to_string()));
+            assert_eq!(
+                Term::new("is_active", vec![Type::Boolean]).validate("TURE").unwrap_err(),
+                ValidateLineError::DataTypeMismatch {
+                    type_: "boolean".to_string(),
+                    value: "TURE".to_string()
+                }
+            );
         }
 
         #[test]
         fn float() {
             assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0"), Ok(()));
             assert_eq!(Term::new("price", vec![Type::Float]).validate("123"), Ok(()));
-            assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0.0"), Err("Invalid value: 123.0.0".to_string()));
+            assert_eq!(
+                Term::new("price", vec![Type::Float]).validate("123.0.0").unwrap_err(),
+                ValidateLineError::DataTypeMismatch {
+                    type_: "float".to_string(),
+                    value: "123.0.0".to_string()
+                }
+            );
         }
 
         #[test]

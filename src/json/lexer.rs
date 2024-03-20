@@ -1,4 +1,5 @@
-use crate::json::data::{Token, TokenKind, Location};
+use super::data::{Token, TokenKind, Location};
+use super::error::{SchemaErrors, SchemaError};
 
 pub struct Lexer<'a> {
     source: &'a str,
@@ -13,18 +14,20 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn token(&mut self) -> Option<Box<Token>> {
-        let mut head = self.read_next_token();
+    pub fn token(&mut self) -> Result<Option<Box<Token>>, SchemaErrors> {
+        let mut head = self.read_next_token()?;
         let mut current = &mut head;
+
         while current.kind != TokenKind::EOF {
-            let token = self.read_next_token();
+            let token = self.read_next_token()?;
             current.next = Some(Box::new(token));
             current = current.next.as_mut().unwrap();
         }
-        Some(Box::new(head))
+
+        Ok(Some(Box::new(head)))
     }
 
-    fn read_next_token(&mut self) -> Token {
+    fn read_next_token(&mut self) -> Result<Token, SchemaError> {
         let start = self.offset();
 
         let kind = match self.chars.next() {
@@ -46,17 +49,20 @@ impl<'a> Lexer<'a> {
                 TokenKind::Identifier(identifier)
             }
             Some(' ') => return self.read_next_token(),
-            Some(char) => panic!("Unexpected character: {}", char),
+            Some(char) => return Err(SchemaError::UnexpectedCharacter {
+                text: char.to_string(),
+                location: Location { start, end: self.offset() },
+            }),
             None => TokenKind::EOF,
         };
 
         let end = self.offset();
 
-        Token {
+        Ok(Token {
             kind,
             location: Location { start, end },
             next: None,
-        }
+        })
     }
 
     fn offset(&self) -> usize {
@@ -67,7 +73,7 @@ impl<'a> Lexer<'a> {
 #[test]
 fn test_empty_object() {
     let mut lexer = Lexer::new("{}");
-    let token = lexer.token();
+    let token = lexer.token().unwrap();
 
     assert_eq!(token, Some(Box::new(Token {
         kind: TokenKind::LeftBrace,
@@ -88,7 +94,7 @@ fn test_empty_object() {
 #[test]
 fn test_simple_object() {
     let mut lexer = Lexer::new("{name: string}");
-    let token = lexer.token();
+    let token = lexer.token().unwrap();
 
     assert_eq!(token, Some(Box::new(Token {
         kind: TokenKind::LeftBrace,
@@ -120,7 +126,7 @@ fn test_simple_object() {
 #[test]
 fn test_nested_object() {
     let mut lexer = Lexer::new("{name: {first: string, last: string}}");
-    let token = lexer.token();
+    let token = lexer.token().unwrap();
 
     assert_eq!(token, Some(Box::new(Token {
         kind: TokenKind::LeftBrace,

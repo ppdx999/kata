@@ -4,12 +4,15 @@ mod schema;
 mod cli;
 mod tsv;
 mod json;
+mod error;
+mod result;
 
 use clap::Parser;
 use cli::Cli;
 use schema::Schema;
+use result::Result;
 
-fn main() -> Result<(), String> {
+fn main() -> Result<()> {
     let cli = Cli::parse();
     let schema = Schema::from_text(cli.schema_type.to_string().as_str(), cli.schema.as_str())?;
 
@@ -19,5 +22,7 @@ fn main() -> Result<(), String> {
         None => Box::new(BufReader::new(stdin())),
     };
 
-    schema.validate(reader)
+    schema.validate(reader)?;
+
+    Ok(())
 }

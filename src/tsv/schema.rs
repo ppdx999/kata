@@ -1,5 +1,12 @@
 use std::io::BufRead;
-use crate::tsv::term::Term;
+use super::term::Term;
+use super::error::{
+    SchemaErrors,
+    ValidationError,
+    ValidationErrors,
+    ValidateLineError,
+    ValidateLineErrors,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Schema {
@@ -15,45 +22,86 @@ impl Schema {
         self.terms.push(term);
     }
 
-    pub fn from_text(text: &str) -> Result<Schema, String> {
+    pub fn from_text(text: &str) -> Result<Schema, SchemaErrors> {
         let mut schema = Schema::new();
+        let mut errors = vec![];
 
         let terms = text.split_whitespace();
         for term in terms {
-            let term = Term::from_text(term)?;
-            schema.add_term(term);
+            match Term::from_text(term) {
+                Ok(term) => schema.add_term(term),
+                Err(error) => errors.push(error),
+            }
         }
 
-        Ok(schema)
+        if errors.is_empty() {
+            Ok(schema)
+        } else {
+            Err(SchemaErrors(errors))
+        }
     }
 
-    fn validate_line(self: &Schema, line: String) -> Result<(), String> {
+    fn validate_line(self: &Schema, line: String) -> Result<(), ValidateLineErrors> {
         let values = line.split_whitespace().collect::<Vec<&str>>();
         if values.len() != self.terms.len() {
-            return Err(format!("Invalid number of values: {}", values.len()));
+            return Err(ValidateLineErrors(
+                vec![
+                    ValidateLineError::FieldNumberMismatch {
+                        expected: self.terms.len(),
+                        found: values.len()
+                    }
+                ]
+            ));
         }
+
+        let mut errors = vec![];
+
         for (i, value) in values.iter().enumerate() {
             let term = &self.terms[i];
-            // TODO: should combined all error messages and return
-            term.validate(value)?;
+            match term.validate(value) {
+                Ok(_) => (),
+                Err(error) => errors.push(error),
+            }
         }
 
-        Ok(())
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ValidateLineErrors(errors))
+        }
     }
 
-    pub fn validate(self: &Schema, reader: Box<dyn BufRead>) -> Result<(), String> {
-        for line in reader.lines() {
+    pub fn validate(self: &Schema, reader: Box<dyn BufRead>) -> Result<(), ValidationErrors> {
+        let mut errors = vec![];
+
+        for (i, line) in reader.lines().enumerate() {
             let line = line.unwrap();
-            self.validate_line(line)?;
+
+            match self.validate_line(line.clone()) {
+                Ok(_) => (),
+                Err(line_errors) => errors.push(
+                    ValidationError {
+                        line_number: i + 1,
+                        line_text: line,
+                        errors: line_errors,
+                    }
+                )
+            }
         }
-        Ok(())
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ValidationErrors(errors))
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::tsv::term::{Term, Type};
-    use crate::tsv::schema::Schema;
+    use super::*;
+    use crate::tsv::term::Type;
+    use crate::tsv::error::{SchemaError, ValidateLineError};
     
     mod schema_from_text {
         use super::*;
@@ -122,7 +170,26 @@ mod tests {
 
         #[test]
         fn incorrect_schema() {
-            assert_eq!(Schema::from_text("id:integer err:extra").unwrap_err(), "Invalid type: extra");
+            assert_eq!(
+                Schema::from_text("id:integer err:extra").unwrap_err(),
+                SchemaErrors(vec![
+                    SchemaError::InvalidType{
+                        type_: "extra".to_string()
+                    }
+                ])
+            )
+        }
+
+        #[test]
+        fn incorrect_syntax() {
+            assert_eq!(
+                Schema::from_text("id").unwrap_err(),
+                SchemaErrors(vec![
+                    SchemaError::InvalidSyntax {
+                        text: "id".to_string()
+                    }
+                ])
+            )
         }
     }
 
@@ -132,60 +199,128 @@ mod tests {
         #[test]
         fn integer() {
             let schema = Schema::from_text("id:integer").unwrap();
-            assert_eq!(schema.validate_line("123".to_owned()).unwrap(), ());
-            assert_eq!(schema.validate_line("123.0".to_owned()).unwrap_err(), "Invalid value: 123.0");
+            assert_eq!(schema.validate_line("123".to_owned()), Ok(()));
+
+            assert_eq!(
+                schema.validate_line("123.0".to_owned()),
+                Err(
+                    ValidateLineErrors(
+                        vec![
+                            ValidateLineError::DataTypeMismatch {
+                                type_: "integer".to_string(),
+                                value: "123.0".to_string()
+                            }
+                        ]
+                    )
+                )
+            );
         }
 
         #[test]
         fn string() {
             let schema = Schema::from_text("name:string").unwrap();
-            assert_eq!(schema.validate_line("John_Doe".to_owned()).unwrap(), ());
+
+            assert_eq!(schema.validate_line("John_Doe".to_owned()), Ok(()));
         }
 
         #[test]
         fn boolean() {
             let schema = Schema::from_text("is_active:boolean").unwrap();
-            assert_eq!(schema.validate_line("true".to_owned()).unwrap(), ());
-            assert_eq!(schema.validate_line("false".to_owned()).unwrap(), ());
-            assert_eq!(schema.validate_line("TURE".to_owned()).unwrap_err(), "Invalid value: TURE");
+
+            assert_eq!(schema.validate_line("true".to_owned()), Ok(()));
+            assert_eq!(schema.validate_line("false".to_owned()), Ok(()));
+            assert_eq!(
+                schema.validate_line("TURE".to_owned()),
+                Err(
+                    ValidateLineErrors(
+                        vec![
+                            ValidateLineError::DataTypeMismatch {
+                                type_: "boolean".to_string(),
+                                value: "TURE".to_string()
+
+                            }
+                        ]
+                    )
+                )
+            );
         }
 
         #[test]
         fn float() {
             let schema = Schema::from_text("price:float").unwrap();
-            assert_eq!(schema.validate_line("123.0".to_owned()).unwrap(), ());
-            assert_eq!(schema.validate_line("123".to_owned()).unwrap(), ());
-            assert_eq!(schema.validate_line("123.0.0".to_owned()).unwrap_err(), "Invalid value: 123.0.0");
+            assert_eq!(schema.validate_line("123.0".to_owned()), Ok(()));
+            assert_eq!(schema.validate_line("123".to_owned()), Ok(()));
+            assert_eq!(
+                schema.validate_line("123.0.0".to_owned()),
+                Err(
+                    ValidateLineErrors(
+                        vec![
+                            ValidateLineError::DataTypeMismatch {
+                                type_: "float".to_string(),
+                                value: "123.0.0".to_string()
+                            }
+                        ]
+                    )
+                )
+            )
         }
 
         #[test]
         fn null() {
             let schema = Schema::from_text("deleted_field:null").unwrap();
-            assert_eq!(schema.validate_line("_".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("_".to_owned()), Ok(()));
         }
 
         #[test]
         fn multiple_terms() {
             let schema = Schema::from_text("id:integer name:string").unwrap();
-            assert_eq!(schema.validate_line("1 john_doe".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("1 john_doe".to_owned()), Ok(()));
         }
 
         #[test]
         fn accept_extra_space() {
             let schema = Schema::from_text("id:integer name:string").unwrap();
-            assert_eq!(schema.validate_line("1       john_doe".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("1       john_doe".to_owned()), Ok(()));
         }
 
         #[test]
         fn incorrect_number_of_values() {
             let schema = Schema::from_text("id:integer name:string").unwrap();
-            assert_eq!(schema.validate_line("1".to_owned()).unwrap_err(), "Invalid number of values: 1");
+            assert_eq!(
+                schema.validate_line("1".to_owned()),
+                Err(
+                    ValidateLineErrors(
+                        vec![
+                            ValidateLineError::FieldNumberMismatch {
+                                expected: 2,
+                                found: 1
+                            }
+                        ]
+                    )
+                )
+            )
         }
 
         #[test]
         fn incorrect_value() {
-            let schema = Schema::from_text("id:integer name:string").unwrap();
-            assert_eq!(schema.validate_line("xxx yyy".to_owned()).unwrap_err(), "Invalid value: xxx");
+            let schema = Schema::from_text("id:integer name:integer").unwrap();
+            assert_eq!(
+                schema.validate_line("xxx yyy".to_owned()),
+                Err(
+                    ValidateLineErrors(
+                        vec![
+                            ValidateLineError::DataTypeMismatch {
+                                type_: "integer".to_string(),
+                                value: "xxx".to_string()
+                            },
+                            ValidateLineError::DataTypeMismatch {
+                                type_: "integer".to_string(),
+                                value: "yyy".to_string()
+                            }
+                        ]
+                    )
+                )
+            )
         }
     }
 }

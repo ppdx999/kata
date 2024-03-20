@@ -1,38 +1,63 @@
-use crate::json::data::{Token, TokenKind, Value, Type, Object, Property};
-use crate::json::lexer::Lexer;
+use super::data::{Token, TokenKind, Value, Type, Object, Property};
+use super::error::{SchemaErrors, SchemaError};
+use super::lexer::Lexer;
 
 pub struct Parser {
     token: Option<Box<Token>>,
 }
 
 impl Parser {
-    pub fn new(text: &str) -> Parser {
+    pub fn new(text: &str) -> Result<Parser, SchemaErrors> {
         let mut lexer = Lexer::new(text);
-        Parser { token: lexer.token() }
+        Ok(Parser { token: lexer.token()? })
     }
 
-    fn expect(&mut self, kind: TokenKind) {
+    fn expect(&mut self, kind: TokenKind) -> Result<(), SchemaError> {
         let token = self.token.take().unwrap();
         if token.kind != kind {
-            panic!("Unexpected token {:?}", token);
+            return Err(SchemaError::UnexpectedToken {
+                expected_kind: kind,
+                actual_kind: token.kind,
+                location: token.location,
+            });
         }
         self.token = token.next;
+        Ok(())
     }
 
-    fn expect_identifier(&mut self) -> String {
+    fn expect_identifier(&mut self) -> Result<String, SchemaError> {
         let token = self.token.take().unwrap();
         if let TokenKind::Identifier(identifier) = token.kind {
             self.token = token.next;
-            return identifier;
+            return Ok(identifier);
         }
-        panic!("Unexpected token {:?}", token);
+        Result::Err(SchemaError::UnexpectedToken {
+            expected_kind: TokenKind::Identifier("".to_string()),
+            actual_kind: token.kind,
+            location: token.location,
+        })
     }
 
-    fn expect_type(&mut self) -> Type {
-        let type_ = self.expect_identifier();
-        match type_.as_str() {
-            "string" => Type::String,
-            _ => panic!("Invalid type: {}", type_),
+    fn expect_type(&mut self) -> Result<Type, SchemaError> {
+        let token = self.token.take().unwrap();
+
+        if let TokenKind::Identifier(identifier) = token.kind {
+            self.token = token.next;
+
+            match identifier.as_str() {
+                "string" => Ok(Type::String),
+                _ => Err(SchemaError::InvalidType {
+                    type_: identifier,
+                    location: token.location,
+                }),
+            }
+        }
+        else {
+            Err(SchemaError::UnexpectedToken {
+                expected_kind: TokenKind::Identifier("".to_string()),
+                actual_kind: token.kind,
+                location: token.location,
+            })
         }
     }
 
@@ -53,49 +78,49 @@ impl Parser {
         false
     }
 
-    pub fn parse(&mut self) -> Value {
-        let object = self.object();
-        self.expect(TokenKind::EOF);
-        Value::Object(object)
+    pub fn parse(&mut self) -> Result<Value, SchemaError> {
+        let object = self.object()?;
+        self.expect(TokenKind::EOF)?;
+        Ok(Value::Object(object))
     }
 
-    fn object(&mut self) -> Object {
+    fn object(&mut self) -> Result<Object, SchemaError> {
         let mut object = Object::new();
-        self.expect(TokenKind::LeftBrace);
+        self.expect(TokenKind::LeftBrace)?;
         while !self.consume(TokenKind::RightBrace) {
-            let property = self.property();
+            let property = self.property()?;
             object.properties.push(property);
             self.consume(TokenKind::Comma);
         };
-        object
+        Ok(object)
     }
 
-    fn property(&mut self) -> Property {
-        let name = self.expect_identifier();
-        self.expect(TokenKind::Colon);
+    fn property(&mut self) -> Result<Property, SchemaError> {
+        let name = self.expect_identifier()?;
+        self.expect(TokenKind::Colon)?;
 
         let type_ = if self.peek(TokenKind::LeftBrace) {
-            let object = self.object();
+            let object = self.object()?;
             Type::Object(Box::new(object))
         } else {
-            self.expect_type()
+            self.expect_type()?
         };
 
-        Property::new(name, type_)
+        Ok(Property::new(name, type_))
     }
 }
 
 
 #[test]
 fn test_empty_object() {
-    let mut parser = Parser::new("{}");
-    assert_eq!(parser.parse(), Value::Object(Object::new()));
+    let mut parser = Parser::new("{}").unwrap();
+    assert_eq!(parser.parse().unwrap(), Value::Object(Object::new()));
 }
 
 #[test]
 fn test_simple_object() {
-    let mut parser = Parser::new("{name: string}");
-    assert_eq!(parser.parse(), Value::Object(Object {
+    let mut parser = Parser::new("{name: string}").unwrap();
+    assert_eq!(parser.parse().unwrap(), Value::Object(Object {
         properties: vec![Property::new("name".to_string(), Type::String)]
     }));
 }
@@ -103,8 +128,8 @@ fn test_simple_object() {
 
 #[test]
 fn test_nested_object() {
-    let mut parser = Parser::new("{name: string, address: {city: string, country: string}}");
-    assert_eq!(parser.parse(), Value::Object(Object {
+    let mut parser = Parser::new("{name: string, address: {city: string, country: string}}").unwrap();
+    assert_eq!(parser.parse().unwrap(), Value::Object(Object {
         properties: vec![
             Property::new("name".to_string(), Type::String),
             Property::new("address".to_string(), Type::Object(

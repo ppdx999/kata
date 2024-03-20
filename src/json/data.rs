@@ -4,6 +4,12 @@ pub struct Location {
     pub end: usize,
 }
 
+impl std::fmt::Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "start: {}, end: {}", self.start, self.end)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
     Identifier(String),
