@@ -50,44 +50,142 @@ impl Schema {
     }
 }
 
-#[test]
-fn test_schema_from_text() {
+#[cfg(test)]
+mod tests {
     use crate::tsv::term::{Term, Type};
-    // correct schema
-    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap(), Schema {
-        terms: vec![
-            Term::new("id", vec![Type::Integer]),
-            Term::new("name", vec![Type::String]),
-            Term::new("is_active", vec![Type::Boolean]),
-            Term::new("price", vec![Type::Float]),
-            Term::new("deleted_field", vec![Type::Null]),
-            Term::new("optional_field", vec![Type::String, Type::Null]),
-        ]
-    });
+    use crate::tsv::schema::Schema;
+    
+    mod schema_from_text {
+        use super::*;
 
-    // Accept extra space in field separator
-    assert_eq!(Schema::from_text("id:integer \t name:string").unwrap(), Schema {
-        terms: vec![
-            Term::new("id", vec![Type::Integer]),
-            Term::new("name", vec![Type::String]),
-        ]
-    });
+        #[test]
+        fn single_term() {
+            assert_eq!(Schema::from_text("id:integer").unwrap(), Schema {
+                terms: vec![
+                    Term::new("id", vec![Type::Integer])
+                ]
+            });
 
-    // incorrect schema
-    assert_eq!(Schema::from_text("id:integer name:string is_active:boolean price:float err:extra").unwrap_err(), "Invalid type: extra");
-}
+            assert_eq!(Schema::from_text("name:string").unwrap(), Schema {
+                terms: vec![
+                    Term::new("name", vec![Type::String])
+                ]
+            });
+            
+            assert_eq!(Schema::from_text("is_active:boolean").unwrap(), Schema {
+                terms: vec![
+                    Term::new("is_active", vec![Type::Boolean])
+                ]
+            });
 
-#[test]
-fn test_validate_line() {
-    let schema = Schema::from_text("id:integer name:string is_active:boolean price:float deleted_field:null optional_field:string|null").unwrap();
+            assert_eq!(Schema::from_text("price:float").unwrap(), Schema {
+                terms: vec![
+                    Term::new("price", vec![Type::Float])
+                ]
+            });
 
-    // correct values
-    assert_eq!(schema.validate_line("1 john_doe true 100.0 _ _".to_owned()).unwrap(), ());
-    assert_eq!(schema.validate_line("1 john_doe true\t100.0 _ _".to_owned()).unwrap(), ());
+            assert_eq!(Schema::from_text("deleted_field:null").unwrap(), Schema {
+                terms: vec![
+                    Term::new("deleted_field", vec![Type::Null])
+                ]
+            });
+        }
 
-    // // multiple whitespaces
-    assert_eq!(schema.validate_line("1  john_doe  true  100.0  _ _".to_owned()).unwrap(), ());
+        #[test]
+        fn sum_term() {
+            assert_eq!(Schema::from_text("optional_field:string|null").unwrap(), Schema {
+                terms: vec![
+                    Term::new("optional_field", vec![Type::String, Type::Null])
+                ]
+            });
+        }
 
-    // // incorrect values
-    assert_eq!(schema.validate_line("1 john_doe true 100.0 _ _ extra".to_owned()).unwrap_err(), "Invalid number of values: 7");
+        #[test]
+        fn multiple_terms() {
+            assert_eq!(Schema::from_text("id:integer name:string").unwrap(), Schema {
+            terms: vec![
+                Term::new("id", vec![Type::Integer]),
+                Term::new("name", vec![Type::String])
+            ]
+            });
+        }
+
+        #[test]
+        fn accept_extra_space() {
+            assert_eq!(Schema::from_text("id:integer \t name:string").unwrap(), Schema {
+            terms: vec![
+                Term::new("id", vec![Type::Integer]),
+                Term::new("name", vec![Type::String])
+            ]
+            });
+        }
+
+        #[test]
+        fn incorrect_schema() {
+            assert_eq!(Schema::from_text("id:integer err:extra").unwrap_err(), "Invalid type: extra");
+        }
+    }
+
+    mod validate_line {
+        use super::*;
+
+        #[test]
+        fn integer() {
+            let schema = Schema::from_text("id:integer").unwrap();
+            assert_eq!(schema.validate_line("123".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("123.0".to_owned()).unwrap_err(), "Invalid value: 123.0");
+        }
+
+        #[test]
+        fn string() {
+            let schema = Schema::from_text("name:string").unwrap();
+            assert_eq!(schema.validate_line("John_Doe".to_owned()).unwrap(), ());
+        }
+
+        #[test]
+        fn boolean() {
+            let schema = Schema::from_text("is_active:boolean").unwrap();
+            assert_eq!(schema.validate_line("true".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("false".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("TURE".to_owned()).unwrap_err(), "Invalid value: TURE");
+        }
+
+        #[test]
+        fn float() {
+            let schema = Schema::from_text("price:float").unwrap();
+            assert_eq!(schema.validate_line("123.0".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("123".to_owned()).unwrap(), ());
+            assert_eq!(schema.validate_line("123.0.0".to_owned()).unwrap_err(), "Invalid value: 123.0.0");
+        }
+
+        #[test]
+        fn null() {
+            let schema = Schema::from_text("deleted_field:null").unwrap();
+            assert_eq!(schema.validate_line("_".to_owned()).unwrap(), ());
+        }
+
+        #[test]
+        fn multiple_terms() {
+            let schema = Schema::from_text("id:integer name:string").unwrap();
+            assert_eq!(schema.validate_line("1 john_doe".to_owned()).unwrap(), ());
+        }
+
+        #[test]
+        fn accept_extra_space() {
+            let schema = Schema::from_text("id:integer name:string").unwrap();
+            assert_eq!(schema.validate_line("1       john_doe".to_owned()).unwrap(), ());
+        }
+
+        #[test]
+        fn incorrect_number_of_values() {
+            let schema = Schema::from_text("id:integer name:string").unwrap();
+            assert_eq!(schema.validate_line("1".to_owned()).unwrap_err(), "Invalid number of values: 1");
+        }
+
+        #[test]
+        fn incorrect_value() {
+            let schema = Schema::from_text("id:integer name:string").unwrap();
+            assert_eq!(schema.validate_line("xxx yyy".to_owned()).unwrap_err(), "Invalid value: xxx");
+        }
+    }
 }

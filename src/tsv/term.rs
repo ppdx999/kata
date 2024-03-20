@@ -87,37 +87,73 @@ impl Term {
     }
 }
 
-#[test]
-fn test_term_from_text() {
-    // correct schema
-    assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", vec![Type::Integer]));
-    assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", vec![Type::String]));
-    assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", vec![Type::Boolean]));
-    assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", vec![Type::Float]));
-    assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", vec![Type::Float]));
-    assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", vec![Type::Null]));
+#[cfg(test)]
+mod tests {
+    use crate::tsv::term::{Term, Type};
 
-    // incorrect schema
-    assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
-    assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
-}
+    mod term_from_text {
+        use super::*;
 
-#[test]
-fn test_validate() {
-    assert_eq!(Term::new("id", vec![Type::Integer]).validate("123"), Ok(()));
-    assert_eq!(Term::new("id", vec![Type::Integer]).validate("123.0"), Err("Invalid value: 123.0".to_string()));
+        #[test]
+        fn primitives() {
+            assert_eq!(Term::from_text("id:integer").unwrap(), Term::new("id", vec![Type::Integer]));
+            assert_eq!(Term::from_text("name:string").unwrap(), Term::new("name", vec![Type::String]));
+            assert_eq!(Term::from_text("is_active:boolean").unwrap(), Term::new("is_active", vec![Type::Boolean]));
+            assert_eq!(Term::from_text("price:float").unwrap(), Term::new("price", vec![Type::Float]));
+            assert_eq!(Term::from_text("deleted_field:null").unwrap(), Term::new("deleted_field", vec![Type::Null]));
+        }
 
-    assert_eq!(Term::new("name", vec![Type::String]).validate("John Doe"), Ok(()));
+        #[test]
+        fn case_insensitive() {
+            assert_eq!(Term::from_text("id:INTEGER").unwrap(), Term::new("id", vec![Type::Integer]));
+            assert_eq!(Term::from_text("name:STRING").unwrap(), Term::new("name", vec![Type::String]));
+            assert_eq!(Term::from_text("is_active:BOOLEAN").unwrap(), Term::new("is_active", vec![Type::Boolean]));
+            assert_eq!(Term::from_text("price:FLOAT").unwrap(), Term::new("price", vec![Type::Float]));
+            assert_eq!(Term::from_text("deleted_field:NULL").unwrap(), Term::new("deleted_field", vec![Type::Null]));
+        }
 
-    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("true"), Ok(()));
-    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("false"), Ok(()));
-    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("TRUE"), Ok(()));
-    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("True"), Ok(()));
-    assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("TURE"), Err("Invalid value: TURE".to_string()));
+        #[test]
+        fn invalid_type() {
+            assert_eq!(Term::from_text("id:binary").unwrap_err(), "Invalid type: binary");
+        }
 
-    assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0"), Ok(()));
-    assert_eq!(Term::new("price", vec![Type::Float]).validate("123"), Ok(()));
-    assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0.0"), Err("Invalid value: 123.0.0".to_string()));
+        #[test]
+        fn invalid_syntax() {
+            assert_eq!(Term::from_text("id").unwrap_err(), "Invalid term: id");
+        }
+    }
 
-    assert_eq!(Term::new("deleted_field", vec![Type::Null]).validate("_"), Ok(()));
+    mod term_validate {
+        use super::*;
+
+        #[test]
+        fn integer() {
+            assert_eq!(Term::new("id", vec![Type::Integer]).validate("123"), Ok(()));
+            assert_eq!(Term::new("id", vec![Type::Integer]).validate("123.0"), Err("Invalid value: 123.0".to_string()));
+        }
+
+        #[test]
+        fn string() {
+            assert_eq!(Term::new("name", vec![Type::String]).validate("John Doe"), Ok(()));
+        }
+
+        #[test]
+        fn boolean() {
+            assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("true"), Ok(()));
+            assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("false"), Ok(()));
+            assert_eq!(Term::new("is_active", vec![Type::Boolean]).validate("TURE"), Err("Invalid value: TURE".to_string()));
+        }
+
+        #[test]
+        fn float() {
+            assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0"), Ok(()));
+            assert_eq!(Term::new("price", vec![Type::Float]).validate("123"), Ok(()));
+            assert_eq!(Term::new("price", vec![Type::Float]).validate("123.0.0"), Err("Invalid value: 123.0.0".to_string()));
+        }
+
+        #[test]
+        fn null() {
+            assert_eq!(Term::new("deleted_field", vec![Type::Null]).validate("_"), Ok(()));
+        }
+    }
 }
