@@ -1,0 +1,24 @@
+
+Error: Validation failed at line 1
+Raw text: xxxx jhon_doe@example.com  true  Jhon_Doe
+
+----------------
+
+    Error: Data type mismatch
+
+    Expected type is integer, But Found: xxxx
+
+----------------
+
+
+
+Error: Validation failed at line 3
+Raw text: xxxx mac_kily@example.com  true  _
+
+----------------
+
+    Error: Data type mismatch
+
+    Expected type is integer, But Found: xxxx
+
+----------------

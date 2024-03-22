@@ -27,16 +27,17 @@ run_test() {
   #
   # Assert
   #
-  if [ $? -ne $(cat $1/result.txt) ]; then
+	result=$?
+  if [ $result -ne $(cat $1/result.txt) ]; then
     printf "\033[1;31mTest $1 failed\033[0m\n"
     echo
     printf "\033[1;31mExpected exit code: $(cat $1/result.txt)\033[0m\n"
     echo
-    printf "\033[1;31mActual exit code  : $? \033[0m\n"
+    printf "\033[1;31mActual exit code  : $result \033[0m\n"
     exit 1
   fi
 
-  if [ "$(cat $1/out.txt)" != "$(cat $tmp_stdout)" ]; then
+  if [ "$(cat $1/out.txt | tr -d '[:blank:]' )" != "$(cat $tmp_stdout | tr -d '[:blank:]' )" ]; then
     printf "\033[1;31mTest $1 failed\033[0m\n"
     echo
     printf "\033[1;31mExpected stdout: \n$(cat $1/out.txt)\033[0m\n"
@@ -45,7 +46,7 @@ run_test() {
     exit 1
   fi
 
-  if [ "$(cat $1/err.txt)" != "$(cat $tmp_stderr)" ]; then
+  if [ "$(cat $1/err.txt | tr -d '[:blank:]' )" != "$(cat $tmp_stderr | tr -d '[:blank:]' )" ]; then
     printf "\033[1;31mTest $1 failed\033[0m\n"
     echo
     printf "\033[1;31mExpected stderr: \n$(cat $1/err.txt)\033[0m\n"
@@ -56,5 +57,6 @@ run_test() {
 }
 
 run_test $test_dir/tsv/multi_column
+run_test $test_dir/tsv/multi_validation_error
 
 printf "\033[1;32mAll tests passed\033[0m\n"

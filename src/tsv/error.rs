@@ -3,19 +3,19 @@ use thiserror::Error;
 #[derive(Error, Debug, PartialEq)]
 pub enum SchemaError {
     #[error(r#"
-        Error: Invalid Syntax
+    Error: Invalid Syntax
 
-        Expect: <id>:<type>
-        But, Found: {text}
+    Expect: <id>:<type>
+    But, Found: {text}
     "#)]
     InvalidSyntax {
         text: String
     },
 
     #[error(r#"
-        Error: Invalid Type {type_}
+    Error: Invalid Type {type_}
 
-        Available types: integer, float, string, boolean, null
+    Available types: integer, float, string, boolean, null
     "#)]
     InvalidType {
         type_: String
@@ -37,9 +37,9 @@ impl std::fmt::Display for SchemaErrors {
 #[derive(Error, Debug, PartialEq)]
 pub enum ValidateLineError {
     #[error(r#"
-        Error: Data type mismatch
+    Error: Data type mismatch
 
-        Expected type is {type_}, But Found: {value}
+    Expected type is {type_}, But Found: {value}
     "#)]
     DataTypeMismatch {
         type_: String,
@@ -72,10 +72,10 @@ impl std::fmt::Display for ValidateLineErrors {
 
 #[derive(Error, Debug, PartialEq)]
 #[error(r#"
-    Error: Validation failed at line {line_number}
-    Raw text: {line_text}
+Error: Validation failed at line {line_number}
+Raw text: {line_text}
 
-    {errors}
+{errors}
 "#)]
 pub struct ValidationError {
     pub line_text: String,
