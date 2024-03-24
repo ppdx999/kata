@@ -31,6 +31,7 @@ pub struct Token {
 pub enum Type {
     String,
     Number,
+    Boolean,
     Object(Box<Object>),
 }
 

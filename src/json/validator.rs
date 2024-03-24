@@ -69,6 +69,13 @@ impl Validator {
                     value: value.to_string()
                 }.into())
             },
+            schema::Type::Boolean => match value {
+                Value::Bool(_) => Ok(true),
+                _ => Err(ValidationError::DataTypeMismatch {
+                    type_: "boolean".to_string(),
+                    value: value.to_string()
+                }.into())
+            }
             schema::Type::Object(schema) => match value {
                 Value::Object(object) => Ok(Self::object(schema, object)?),
                 _ => Err(ValidationError::DataTypeMismatch {
@@ -115,6 +122,20 @@ mod tests {
             ValidationErrors(vec![ValidationError::DataTypeMismatch {
                 type_: "number".to_string(),
                 value: "\"text\"".to_string()
+            }])
+        )
+    }
+
+    #[test]
+    fn test_single_boolean() {
+        let schema = Schema::from_text("{ok: boolean}").unwrap();
+        assert!(Validator::validate(&schema.root, r#"{"ok": true}"#).unwrap());
+        assert!(Validator::validate(&schema.root, r#"{"ok": false}"#).unwrap());
+        assert_eq!(
+            Validator::validate(&schema.root, r#"{"ok":"true"}"#).unwrap_err(),
+            ValidationErrors(vec![ValidationError::DataTypeMismatch {
+                type_: "boolean".to_string(),
+                value: "\"true\"".to_string()
             }])
         )
     }
