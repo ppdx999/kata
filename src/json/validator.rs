@@ -73,43 +73,58 @@ impl Validator {
     }
 }
 
-#[test]
-fn test_empty_object() {
-    use crate::json::schema::Schema;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::schema::Schema;
 
-    let schema = Schema::from_text("{}").unwrap();
-    assert!(Validator::validate(&schema.root, "{}").unwrap());
-}
+    #[test]
+    fn test_empty_object() {
+        let schema = Schema::from_text("{}").unwrap();
+        assert!(Validator::validate(&schema.root, "{}").unwrap());
+    }
 
-#[test]
-fn test_simple_object() {
-    use crate::json::schema::Schema;
-
-    let schema = Schema::from_text("{name: string, email: string}").unwrap();
-
-    assert!(Validator::validate(&schema.root, r#"{"name": "John", "email": "test@example.com"}"#).unwrap());
-    assert_eq!(
-        Validator::validate(&schema.root, r#"{"nome": "John", "emaik": "test@example.com"}"#).unwrap_err(),
-        ValidationErrors(vec![
-            ValidationError::PropertyNotFound { name: "name".to_string() },
-            ValidationError::PropertyNotFound { name: "email".to_string() },
-        ])
-    );
-}
-
-#[test]
-fn test_nested_object() {
-    use crate::json::schema::Schema;
-    let schema = Schema::from_text("{address: {street: string}}").unwrap();
-
-    assert!(Validator::validate(&schema.root, r#"{"address": {"street": "Main St."}}"#).unwrap());
-    assert_eq!(
-        Validator::validate(&schema.root, r#"{"address": {"street": {}}}"#).unwrap_err(),
-        ValidationErrors(vec![
-            ValidationError::DataTypeMismatch {
+    #[test]
+    fn test_single_string() {
+        let schema = Schema::from_text("{id: string}").unwrap();
+        assert!(Validator::validate(&schema.root, r#"{"id": "xxx-yyy"}"#).unwrap());
+        assert_eq!(
+            Validator::validate(&schema.root, r#"{"id":0}"#).unwrap_err(),
+            ValidationErrors(vec![ValidationError::DataTypeMismatch {
                 type_: "string".to_string(),
-                value: "{}".to_string()
-            }
-        ])
-    );
+                value: "0".to_string()
+            }])
+        )
+    }
+
+    #[test]
+    fn test_multi_property() {
+        let schema = Schema::from_text("{id: string, email: string}").unwrap();
+        assert!(
+            Validator::validate(
+                &schema.root,
+                r#"{"id": "xxx-yyy", "email": "admin@example.com"}"#
+            )
+            .unwrap()
+        )
+    }
+
+    #[test]
+    fn test_nested_object() {
+        let schema = Schema::from_text("{address: {street: string}}").unwrap();
+        assert!(
+            Validator::validate(&schema.root, r#"{"address": {"street": "Main St."}}"#).unwrap()
+        )
+    }
+
+    #[test]
+    fn test_property_not_found() {
+        let schema = Schema::from_text("{id: string, name: string}") .unwrap();
+        assert_eq!(
+            Validator::validate(&schema.root, r#"{"name": "John"}"#).unwrap_err(),
+            ValidationErrors(vec![ValidationError::PropertyNotFound {
+                name: "id".to_string()
+            }])
+        )
+    }
 }

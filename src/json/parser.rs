@@ -145,3 +145,27 @@ fn test_nested_object() {
         ]
     }));
 }
+
+
+#[test]
+fn test_invalid_type() {
+    use super::data::Location;
+
+    let mut parser = Parser::new("{name: invalid}").unwrap();
+    assert_eq!(parser.parse().unwrap_err(), SchemaError::InvalidType {
+        type_: "invalid".to_string(),
+        location: Location { start: 7, end: 14 }
+    });
+}
+
+#[test]
+fn test_invalid_syntax() {
+    use super::data::Location;
+    let mut parser = Parser::new("{name}").unwrap();
+
+    assert_eq!(parser.parse().unwrap_err(), SchemaError::UnexpectedToken {
+        expected_kind: TokenKind::Colon,
+        actual_kind: TokenKind::RightBrace,
+        location: Location { start: 5, end: 6 }
+    });
+}
