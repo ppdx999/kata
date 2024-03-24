@@ -45,6 +45,7 @@ impl Parser {
             self.token = token.next;
 
             match identifier.as_str() {
+                "null" => Ok(Type::Null),
                 "string" => Ok(Type::String),
                 "number" => Ok(Type::Number),
                 "boolean" => Ok(Type::Boolean),

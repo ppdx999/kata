@@ -29,6 +29,7 @@ pub struct Token {
 
 #[derive(Debug, PartialEq)]
 pub enum Type {
+    Null,
     String,
     Number,
     Boolean,

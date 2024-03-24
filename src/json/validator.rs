@@ -55,6 +55,13 @@ impl Validator {
 
     fn property(schema: &schema::Property, value: &Value) -> Result<bool, ValidationErrors> {
         match &schema.type_ {
+            schema::Type::Null => match value {
+                Value::Null => Ok(true),
+                _ => Err(ValidationError::DataTypeMismatch {
+                    type_: "null".to_string(),
+                    value: value.to_string(),
+                }.into()),
+            },
             schema::Type::String => match value {
                 Value::String(_) => Ok(true),
                 _ => Err(ValidationError::DataTypeMismatch {
@@ -96,6 +103,19 @@ mod tests {
     fn test_empty_object() {
         let schema = Schema::from_text("{}").unwrap();
         assert!(Validator::validate(&schema.root, "{}").unwrap());
+    }
+
+    #[test]
+    fn test_single_null() {
+        let schema = Schema::from_text("{id: null}").unwrap();
+        assert!(Validator::validate(&schema.root, r#"{"id": null}"#).unwrap());
+        assert_eq!(
+            Validator::validate(&schema.root, r#"{"id": 0}"#).unwrap_err(),
+            ValidationErrors(vec![ValidationError::DataTypeMismatch {
+                type_: "null".to_string(),
+                value: "0".to_string()
+            }])
+        )
     }
 
     #[test]
