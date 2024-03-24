@@ -1,0 +1,12 @@
+
+Error: Validation failed at line 1
+Raw text: 123.0.0
+
+----------------
+
+    Error: Data type mismatch
+
+    Expected type is float, But Found: 123.0.0
+
+----------------
+

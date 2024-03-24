@@ -1,0 +1,12 @@
+
+Error: Validation failed at line 1
+Raw text: ture
+
+----------------
+
+    Error: Data type mismatch
+
+    Expected type is boolean, But Found: ture
+
+----------------
+
