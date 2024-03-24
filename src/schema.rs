@@ -34,10 +34,10 @@ impl Schema {
             _ => panic!("Unknown schema type: {}", schema_type),
         }
     }
-    pub fn validate(&self, reader: Box<dyn BufRead>) -> Result<(), ValidationError> {
+    pub fn print_and_validate(&self, reader: Box<dyn BufRead>) -> Result<(), ValidationError> {
         match self {
-            Schema::Tsv(schema) => Ok(schema.validate(reader)?),
-            Schema::Json(schema) => Ok(schema.validate(reader)?),
+            Schema::Tsv(schema) => Ok(schema.print_and_validate(reader)?),
+            Schema::Json(schema) => Ok(schema.print_and_validate(reader)?),
         }
     }
 }

@@ -22,7 +22,7 @@ fn main() -> Result<()> {
         None => Box::new(BufReader::new(stdin())),
     };
 
-    if let Err(e) = schema.validate(reader) {
+    if let Err(e) = schema.print_and_validate(reader) {
         eprintln!("{}", e);
         std::process::exit(1);
     };

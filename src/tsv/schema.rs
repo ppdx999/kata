@@ -71,11 +71,12 @@ impl Schema {
         }
     }
 
-    pub fn validate(self: &Schema, reader: Box<dyn BufRead>) -> Result<(), ValidationErrors> {
+    pub fn print_and_validate(self: &Schema, reader: Box<dyn BufRead>) -> Result<(), ValidationErrors> {
         let mut errors = vec![];
 
         for (i, line) in reader.lines().enumerate() {
             let line = line.unwrap();
+            println!("{}", line);
 
             match self.validate_line(line.clone()) {
                 Ok(_) => (),

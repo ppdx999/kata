@@ -16,8 +16,10 @@ impl Schema {
         Ok(Schema { root: parser.parse()? })
     }
 
-    pub fn validate(&self, rdr: Box<dyn BufRead>) -> Result<(), ValidationErrors> {
+    pub fn print_and_validate(&self, rdr: Box<dyn BufRead>) -> Result<(), ValidationErrors> {
         let text = rdr.lines().collect::<Result<Vec<String>, _>>().unwrap().join("\n");
+
+        println!("{}", text);
 
         Validator::validate(&self.root, &text)?;
 
