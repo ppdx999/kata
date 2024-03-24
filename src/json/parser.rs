@@ -46,6 +46,7 @@ impl Parser {
 
             match identifier.as_str() {
                 "string" => Ok(Type::String),
+                "number" => Ok(Type::Number),
                 _ => Err(SchemaError::InvalidType {
                     type_: identifier,
                     location: token.location,

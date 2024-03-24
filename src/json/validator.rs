@@ -62,6 +62,13 @@ impl Validator {
                     value: value.to_string(),
                 }.into()),
             },
+            schema::Type::Number => match value {
+                Value::Number(_) => Ok(true),
+                _ => Err(ValidationError::DataTypeMismatch {
+                    type_: "number".to_string(),
+                    value: value.to_string()
+                }.into())
+            },
             schema::Type::Object(schema) => match value {
                 Value::Object(object) => Ok(Self::object(schema, object)?),
                 _ => Err(ValidationError::DataTypeMismatch {
@@ -93,6 +100,21 @@ mod tests {
             ValidationErrors(vec![ValidationError::DataTypeMismatch {
                 type_: "string".to_string(),
                 value: "0".to_string()
+            }])
+        )
+    }
+
+    #[test]
+    fn test_single_number() {
+        let schema = Schema::from_text("{price: number}").unwrap();
+        assert!(Validator::validate(&schema.root, r#"{"price": 1}"#).unwrap());
+        assert!(Validator::validate(&schema.root, r#"{"price": 100000}"#).unwrap());
+        assert!(Validator::validate(&schema.root, r#"{"price": 0.1}"#).unwrap());
+        assert_eq!(
+            Validator::validate(&schema.root, r#"{"price":"text"}"#).unwrap_err(),
+            ValidationErrors(vec![ValidationError::DataTypeMismatch {
+                type_: "number".to_string(),
+                value: "\"text\"".to_string()
             }])
         )
     }

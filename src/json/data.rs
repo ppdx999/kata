@@ -30,6 +30,7 @@ pub struct Token {
 #[derive(Debug, PartialEq)]
 pub enum Type {
     String,
+    Number,
     Object(Box<Object>),
 }
 
