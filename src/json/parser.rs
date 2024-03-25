@@ -1,4 +1,4 @@
-use super::data::{Token, TokenKind, Value, Type, Object, Property};
+use super::data::{Token, TokenKind, Value, Type, Object, Property, Array};
 use super::error::{SchemaErrors, SchemaError};
 use super::lexer::Lexer;
 
@@ -39,6 +39,18 @@ impl Parser {
     }
 
     fn expect_type(&mut self) -> Result<Type, SchemaError> {
+        if self.peek(TokenKind::LeftBrace) {
+            let object = self.object()?;
+            return Ok(Type::Object(Box::new(object)));
+        }
+
+        if self.peek(TokenKind::Identifier("Array".to_string())) {
+            let array = self.array()?;
+            return Ok(Type::Array(Box::new(array)));
+        }
+
+        // Primitive types
+
         let token = self.token.take().unwrap();
 
         if let TokenKind::Identifier(identifier) = token.kind {
@@ -82,9 +94,34 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Value, SchemaError> {
-        let object = self.object()?;
+        let value = self.value()?;
         self.expect(TokenKind::EOF)?;
-        Ok(Value::Object(object))
+        Ok(value)
+    }
+
+    fn value(&mut self) -> Result<Value, SchemaError> {
+        if self.peek(TokenKind::LeftBrace) {
+            Ok(Value::Object(self.object()?))
+        }
+        else if self.peek(TokenKind::Identifier("Array".to_string())) {
+            Ok(Value::Array(self.array()?))
+        }
+        else {
+            let token = self.token.take().unwrap();
+            Err(SchemaError::UnexpectedToken {
+                expected_kind: TokenKind::LeftBrace,
+                actual_kind: token.kind,
+                location: token.location,
+            })
+        }
+    }
+
+    fn array(&mut self) -> Result<Array, SchemaError> {
+        self.expect(TokenKind::Identifier("Array".to_string()))?;
+        self.expect(TokenKind::LessThan)?;
+        let type_ = self.expect_type()?;
+        self.expect(TokenKind::GreaterThan)?;
+        Ok(Array::new(type_))
     }
 
     fn object(&mut self) -> Result<Object, SchemaError> {
@@ -102,12 +139,7 @@ impl Parser {
         let name = self.expect_identifier()?;
         self.expect(TokenKind::Colon)?;
 
-        let type_ = if self.peek(TokenKind::LeftBrace) {
-            let object = self.object()?;
-            Type::Object(Box::new(object))
-        } else {
-            self.expect_type()?
-        };
+        let type_ = self.expect_type()?;
 
         Ok(Property::new(name, type_))
     }

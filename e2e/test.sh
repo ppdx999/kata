@@ -88,6 +88,14 @@ run_test $test_dir/json/empty
 run_test $test_dir/json/multi_property
 run_test $test_dir/json/nested_object
 
+# Array
+run_test $test_dir/json/array/string
+run_test $test_dir/json/array/object
+run_test $test_dir/json/array/data_type_mismatch_error
+
+# all
+run_test $test_dir/json/all
+
 run_test $test_dir/json/property_not_found_error
 
 echo "Running test without option"

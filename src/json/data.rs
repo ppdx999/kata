@@ -17,6 +17,8 @@ pub enum TokenKind {
     Comma,
     LeftBrace,
     RightBrace,
+    LessThan,
+    GreaterThan,
     EOF,
 }
 
@@ -34,6 +36,7 @@ pub enum Type {
     Number,
     Boolean,
     Object(Box<Object>),
+    Array(Box<Array>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -63,6 +66,18 @@ impl Object {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Array {
+    pub type_: Type,
+}
+
+impl Array {
+    pub fn new(type_: Type) -> Array {
+        Array { type_ }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Object(Object),
+    Array(Array),
 }

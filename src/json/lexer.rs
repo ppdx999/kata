@@ -35,6 +35,8 @@ impl<'a> Lexer<'a> {
             Some('}') => TokenKind::RightBrace,
             Some(':') => TokenKind::Colon,
             Some(',') => TokenKind::Comma,
+            Some('<') => TokenKind::LessThan,
+            Some('>') => TokenKind::GreaterThan,
             Some(char) if char.is_alphanumeric() => {
                 let mut identifier = char.to_string();
                 loop {

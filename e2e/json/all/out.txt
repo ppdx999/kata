@@ -1,0 +1,7 @@
+{
+  "group": "Group1",
+  "members": [
+    {"id": "aaa", "name": "Jhon"},
+    {"id": "bbb", "name": "Mary"}
+  ]
+}

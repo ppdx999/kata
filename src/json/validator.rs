@@ -10,21 +10,34 @@ pub struct Validator;
 impl Validator {
     pub fn validate(schema: &schema::Value, text: &str) -> Result<bool, ValidationErrors> {
         let value: serde_json::Value = Self::parse_json(text)?;
-
-        match value {
-            Value::Object(object) => match schema {
-                schema::Value::Object(schema) => Self::object(&schema, &object),
-            },
-            _ => Err(
-                ValidationError::ParseFaild(
-                    "Top level value must be an object".to_string(),
-                ).into()
-            )
-        }
+        Self::value(schema, &value)
     }
 
     fn parse_json(text: &str) -> Result<Value, ValidationError> {
         Ok(serde_json::from_str(text)?)
+    }
+
+    fn value(schema: &schema::Value, value: &Value) -> Result<bool, ValidationErrors> {
+        match schema {
+            schema::Value::Object(schema) => match value {
+                Value::Object(object) => Self::object(schema, object),
+                _ => Err(
+                    ValidationError::DataTypeMismatch {
+                        type_: "object".to_string(),
+                        value: value.to_string(),
+                    }.into()
+                ),
+            },
+            schema::Value::Array(schema) => match value {
+                Value::Array(array) => Self::array(schema, array),
+                _ => Err(
+                    ValidationError::DataTypeMismatch {
+                        type_: "array".to_string(),
+                        value: value.to_string(),
+                    }.into()
+                ),
+            },
+        }
     }
 
     fn object(schema: &schema::Object, object: &Map<String, Value>) -> Result<bool, ValidationErrors> {
@@ -53,43 +66,60 @@ impl Validator {
         }
     }
 
+    fn array(schema: &schema::Array, array: &Vec<Value>) -> Result<bool, ValidationErrors> {
+        let mut errors = ValidationErrors::new();
+
+        for value in array {
+            match Self::type_(&schema.type_, value) {
+            Ok(_) => {},
+            Err(errs) => errors.extend(errs),
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(true)
+        } else {
+            Err(errors)
+        }
+    }
+
     fn property(schema: &schema::Property, value: &Value) -> Result<bool, ValidationErrors> {
-        match &schema.type_ {
+        Self::type_(&schema.type_, value)
+    }
+
+    fn type_ (schema: &schema::Type, value: &Value) -> Result<bool, ValidationErrors> {
+        match schema {
             schema::Type::Null => match value {
                 Value::Null => Ok(true),
-                _ => Err(ValidationError::DataTypeMismatch {
-                    type_: "null".to_string(),
-                    value: value.to_string(),
-                }.into()),
+                _ => Err(Self::type_mismatch("null", value).into())
             },
             schema::Type::String => match value {
                 Value::String(_) => Ok(true),
-                _ => Err(ValidationError::DataTypeMismatch {
-                    type_: "string".to_string(),
-                    value: value.to_string(),
-                }.into()),
+                _ => Err(Self::type_mismatch("string", value).into())
             },
             schema::Type::Number => match value {
                 Value::Number(_) => Ok(true),
-                _ => Err(ValidationError::DataTypeMismatch {
-                    type_: "number".to_string(),
-                    value: value.to_string()
-                }.into())
+                _ => Err(Self::type_mismatch("number", value).into())
             },
             schema::Type::Boolean => match value {
                 Value::Bool(_) => Ok(true),
-                _ => Err(ValidationError::DataTypeMismatch {
-                    type_: "boolean".to_string(),
-                    value: value.to_string()
-                }.into())
-            }
+                _ => Err(Self::type_mismatch("boolean", value).into())
+            },
             schema::Type::Object(schema) => match value {
                 Value::Object(object) => Ok(Self::object(schema, object)?),
-                _ => Err(ValidationError::DataTypeMismatch {
-                    type_: "object".to_string(),
-                    value: value.to_string(),
-                }.into()),
+                _ => Err(Self::type_mismatch("object", value).into())
             },
+            schema::Type::Array(schema) => match value {
+                Value::Array(array) => Ok(Self::array(schema, array)?),
+                _ => Err(Self::type_mismatch("array", value).into())
+            },
+        }
+    }
+
+    fn type_mismatch(type_: &str, value: &Value) -> ValidationError {
+        ValidationError::DataTypeMismatch {
+            type_: type_.to_string(),
+            value: value.to_string(),
         }
     }
 }

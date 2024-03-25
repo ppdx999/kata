@@ -1,0 +1,1 @@
+{group: string, members: Array<{id: string, name: string}>}
