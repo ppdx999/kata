@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	e2e/test.sh
+	test/test.sh
 
 .PHONY: testrun
 testrun:

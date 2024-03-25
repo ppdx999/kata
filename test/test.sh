@@ -1,7 +1,7 @@
 #!/bin/bash
 
 root_dir=$(dirname $(cd $(dirname $0) && pwd))
-test_dir=$root_dir/e2e
+test_dir=$root_dir/test
 cmd=$root_dir/target/debug/schematch
 
 tmp_stdout=$(mktemp)
