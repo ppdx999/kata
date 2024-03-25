@@ -80,4 +80,5 @@ impl Array {
 pub enum Value {
     Object(Object),
     Array(Array),
+    Type(Type),
 }

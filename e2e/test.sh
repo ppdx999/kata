@@ -88,6 +88,8 @@ run_test $test_dir/json/empty
 run_test $test_dir/json/multi_property
 run_test $test_dir/json/nested_object
 
+run_test $test_dir/json/top_level_type
+
 # Array
 run_test $test_dir/json/array/string
 run_test $test_dir/json/array/object

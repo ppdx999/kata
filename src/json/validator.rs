@@ -37,6 +37,7 @@ impl Validator {
                     }.into()
                 ),
             },
+            schema::Value::Type(schema) => Self::type_(&schema, value),
         }
     }
 

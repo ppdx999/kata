@@ -107,12 +107,7 @@ impl Parser {
             Ok(Value::Array(self.array()?))
         }
         else {
-            let token = self.token.take().unwrap();
-            Err(SchemaError::UnexpectedToken {
-                expected_kind: TokenKind::LeftBrace,
-                actual_kind: token.kind,
-                location: token.location,
-            })
+            Ok(Value::Type(self.expect_type()?))
         }
     }
 
