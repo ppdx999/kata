@@ -80,7 +80,7 @@ This certainly works well, but it is difficult to understand which command does 
 ```shell
 cat /var/log/apache2/access.log                                              |
 schematch 'ip:string localuser:string remoteuser:string time:string 
-           res:string status:number bite:number referer:string agent:string" |
+           res:string status:number bite:number referer:string agent:string' |
 awk '{print $4}'                                                             |
 tr ':/' ' '                                                                  |
 schematch 'date:number month:string year:string h:number m:number s:number'  |
