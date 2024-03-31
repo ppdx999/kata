@@ -90,11 +90,15 @@ run_test $test_dir/json/multi_property
 run_test $test_dir/json/nested_object
 
 run_test $test_dir/json/top_level_type
+run_test $test_dir/json/key_including_dash
+run_test $test_dir/json/key_with_quotes
 
 # Array
 run_test $test_dir/json/array/string
 run_test $test_dir/json/array/object
 run_test $test_dir/json/array/data_type_mismatch_error
+
+run_test $test_dir/json/sum_type
 
 # all
 run_test $test_dir/json/all
