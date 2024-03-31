@@ -27,6 +27,10 @@ impl<'a> Lexer<'a> {
         Ok(Some(Box::new(head)))
     }
 
+    fn is_identifier(&self, c: char) -> bool {
+        c.is_alphanumeric() || c == '_'
+    }
+
     fn read_next_token(&mut self) -> Result<Token, SchemaError> {
         let start = self.offset();
 
@@ -37,11 +41,11 @@ impl<'a> Lexer<'a> {
             Some(',') => TokenKind::Comma,
             Some('<') => TokenKind::LessThan,
             Some('>') => TokenKind::GreaterThan,
-            Some(char) if char.is_alphanumeric() => {
+            Some(char) if self.is_identifier(char) => {
                 let mut identifier = char.to_string();
                 loop {
                     match self.chars.clone().next() {
-                        Some(c) if c.is_alphanumeric() => {
+                        Some(c) if self.is_identifier(c) => {
                             identifier.push(c);
                             self.chars.next();
                         }
@@ -51,6 +55,7 @@ impl<'a> Lexer<'a> {
                 TokenKind::Identifier(identifier)
             }
             Some(' ') => return self.read_next_token(),
+            Some('\n') => return self.read_next_token(),
             Some(char) => return Err(SchemaError::UnexpectedCharacter {
                 text: char.to_string(),
                 location: Location { start, end: self.offset() },
