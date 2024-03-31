@@ -78,14 +78,15 @@ This certainly works well, but it is difficult to understand which command does 
 `Schematch` can change this to
 
 ```shell
-cat /var/log/apache2/access.log                                                                                                       |
-schematch 'ip:string localuser:string remoteuser:string time:string res:string status:number bite:number referer:string agent:string" |
-awk '{print $4}'                                                                                                                      |
-tr ':/' ' '                                                                                                                           |
-schematch 'date:number Month:string year:string hour:number minute:number second:number'                                              |
-awk '{printf "%s_%s\n", $1, $2}'                                                                                                      |
-schematch 'date_month:string'                                                                                                         |
-sort                                                                                                                                  |
+cat /var/log/apache2/access.log                                              |
+schematch 'ip:string localuser:string remoteuser:string time:string 
+           res:string status:number bite:number referer:string agent:string" |
+awk '{print $4}'                                                             |
+tr ':/' ' '                                                                  |
+schematch 'date:number month:string year:string h:number m:number s:number'  |
+awk '{printf "%s_%s\n", $1, $2}'                                             |
+schematch 'date_month:string'                                                |
+sort                                                                         |
 uniq -c
 ```
 
