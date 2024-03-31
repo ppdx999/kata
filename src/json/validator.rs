@@ -23,7 +23,7 @@ impl Validator {
                 Value::Object(object) => Self::object(schema, object),
                 _ => Err(
                     ValidationError::DataTypeMismatch {
-                        type_: "object".to_string(),
+                        types: "object".to_string(),
                         value: value.to_string(),
                     }.into()
                 ),
@@ -32,12 +32,12 @@ impl Validator {
                 Value::Array(array) => Self::array(schema, array),
                 _ => Err(
                     ValidationError::DataTypeMismatch {
-                        type_: "array".to_string(),
+                        types: "array".to_string(),
                         value: value.to_string(),
                     }.into()
                 ),
             },
-            schema::Value::Type(schema) => Self::type_(&schema, value),
+            schema::Value::Types(schema) => Self::types(&schema, value),
         }
     }
 
@@ -71,7 +71,7 @@ impl Validator {
         let mut errors = ValidationErrors::new();
 
         for value in array {
-            match Self::type_(&schema.type_, value) {
+            match Self::types(&schema.types, value) {
             Ok(_) => {},
             Err(errs) => errors.extend(errs),
             }
@@ -85,7 +85,32 @@ impl Validator {
     }
 
     fn property(schema: &schema::Property, value: &Value) -> Result<bool, ValidationErrors> {
-        Self::type_(&schema.type_, value)
+        Self::types(&schema.types, value)
+    }
+
+    fn types(schema: &Vec<schema::Type>, value: &Value) -> Result<bool, ValidationErrors> {
+        let mut ok = false;
+        for type_ in schema {
+            match Self::type_(type_, value) {
+            Ok(_) => {
+                ok = true;
+                break;
+            },
+            Err(_) => {},
+            }
+        }
+
+        if ok {
+            Ok(true)
+        } else {
+            Err(
+            ValidationError::DataTypeMismatch {
+                types: schema.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(" or "),
+                value: value.to_string(),
+            }.into()
+            )
+        }
+            
     }
 
     fn type_ (schema: &schema::Type, value: &Value) -> Result<bool, ValidationErrors> {
@@ -117,9 +142,9 @@ impl Validator {
         }
     }
 
-    fn type_mismatch(type_: &str, value: &Value) -> ValidationError {
+    fn type_mismatch(types: &str, value: &Value) -> ValidationError {
         ValidationError::DataTypeMismatch {
-            type_: type_.to_string(),
+            types: types.to_string(),
             value: value.to_string(),
         }
     }

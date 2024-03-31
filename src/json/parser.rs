@@ -39,18 +39,6 @@ impl Parser {
     }
 
     fn expect_type(&mut self) -> Result<Type, SchemaError> {
-        if self.peek(TokenKind::LeftBrace) {
-            let object = self.object()?;
-            return Ok(Type::Object(Box::new(object)));
-        }
-
-        if self.peek(TokenKind::Identifier("Array".to_string())) {
-            let array = self.array()?;
-            return Ok(Type::Array(Box::new(array)));
-        }
-
-        // Primitive types
-
         let token = self.token.take().unwrap();
 
         if let TokenKind::Identifier(identifier) = token.kind {
@@ -74,6 +62,28 @@ impl Parser {
                 location: token.location,
             })
         }
+    }
+
+    fn expect_types(&mut self) -> Result<Vec<Type>, SchemaError> {
+        if self.peek(TokenKind::LeftBrace) {
+            let object = self.object()?;
+            return Ok(vec![Type::Object(Box::new(object))]);
+        }
+
+        if self.peek(TokenKind::Identifier("Array".to_string())) {
+            let array = self.array()?;
+            return Ok(vec![Type::Array(Box::new(array))]);
+        }
+
+        // Primitive types
+        let mut types = vec![];
+        loop {
+            types.push(self.expect_type()?);
+            if !self.consume(TokenKind::VerticalBar) {
+                break;
+            }
+        };
+        Ok(types)
     }
 
     fn consume(&mut self, kind: TokenKind) -> bool {
@@ -107,14 +117,14 @@ impl Parser {
             Ok(Value::Array(self.array()?))
         }
         else {
-            Ok(Value::Type(self.expect_type()?))
+            Ok(Value::Types(self.expect_types()?))
         }
     }
 
     fn array(&mut self) -> Result<Array, SchemaError> {
         self.expect(TokenKind::Identifier("Array".to_string()))?;
         self.expect(TokenKind::LessThan)?;
-        let type_ = self.expect_type()?;
+        let type_ = self.expect_types()?;
         self.expect(TokenKind::GreaterThan)?;
         Ok(Array::new(type_))
     }
@@ -134,8 +144,8 @@ impl Parser {
         let name = self.expect_identifier()?;
         self.expect(TokenKind::Colon)?;
 
-        let type_ = self.expect_type()?;
+        let types = self.expect_types()?;
 
-        Ok(Property::new(name, type_))
+        Ok(Property::new(name, types))
     }
 }

@@ -19,6 +19,7 @@ pub enum TokenKind {
     RightBrace,
     LessThan,
     GreaterThan,
+    VerticalBar,
     EOF,
 }
 
@@ -39,17 +40,30 @@ pub enum Type {
     Array(Box<Array>),
 }
 
+impl ToString for Type {
+    fn to_string(&self) -> String {
+        match self {
+            Type::Null => "null".to_string(),
+            Type::String => "string".to_string(),
+            Type::Number => "number".to_string(),
+            Type::Boolean => "boolean".to_string(),
+            Type::Object(_) => "object".to_string(),
+            Type::Array(_) => "array".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Property {
     pub name: String,
-    pub type_: Type,
+    pub types: Vec<Type>,
 }
 
 impl Property {
-    pub fn new(name: String, type_: Type) -> Property {
+    pub fn new(name: String, types: Vec<Type>) -> Property {
         Property {
             name,
-            type_,
+            types,
         }
     }
 }
@@ -67,12 +81,12 @@ impl Object {
 
 #[derive(Debug, PartialEq)]
 pub struct Array {
-    pub type_: Type,
+    pub types: Vec<Type>,
 }
 
 impl Array {
-    pub fn new(type_: Type) -> Array {
-        Array { type_ }
+    pub fn new(types: Vec<Type>) -> Array {
+        Array { types }
     }
 }
 
@@ -80,5 +94,5 @@ impl Array {
 pub enum Value {
     Object(Object),
     Array(Array),
-    Type(Type),
+    Types(Vec<Type>),
 }

@@ -69,10 +69,10 @@ pub enum ValidationError {
     #[error(r#"
         Error: Data type mismatch
 
-        Expected type is {type_}, But Found: {value}
+        Expected type is {types}, But Found: {value}
     "#)]
     DataTypeMismatch {
-        type_: String,
+        types: String,
         value: String
     },
 }

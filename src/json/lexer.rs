@@ -41,6 +41,7 @@ impl<'a> Lexer<'a> {
             Some(',') => TokenKind::Comma,
             Some('<') => TokenKind::LessThan,
             Some('>') => TokenKind::GreaterThan,
+            Some('|') => TokenKind::VerticalBar,
             Some('\'') => {
                 let mut string = String::new();
                 loop {
