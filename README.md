@@ -82,6 +82,7 @@ cat /var/log/apache2/access.log                                              |
 schematch 'ip:string localuser:string remoteuser:string time:string 
            res:string status:number bite:number referer:string agent:string' |
 awk '{print $4}'                                                             |
+schematch 'time:string'                                                      |
 tr ':/' ' '                                                                  |
 schematch 'date:number month:string year:string h:number m:number s:number'  |
 awk '{printf "%s_%s\n", $1, $2}'                                             |
