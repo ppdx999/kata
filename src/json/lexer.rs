@@ -41,6 +41,68 @@ impl<'a> Lexer<'a> {
             Some(',') => TokenKind::Comma,
             Some('<') => TokenKind::LessThan,
             Some('>') => TokenKind::GreaterThan,
+            Some('\'') => {
+                let mut string = String::new();
+                loop {
+                    match self.chars.next() {
+                        Some('\'') => break,
+                        Some('\\') => {
+                            match self.chars.next() {
+                                Some('\'') => string.push('\''),
+                                Some(char) => {
+                                    return Err(SchemaError::UnexpectedCharacter {
+                                        text: char.to_string(),
+                                        location: Location { start, end: self.offset() },
+                                    });
+                                }
+                                None => {
+                                    return Err(SchemaError::UnterminatedString {
+                                        location: Location { start, end: self.offset() },
+                                    });
+                                }
+                            }
+                        },
+                        Some(char) => string.push(char),
+                        None => {
+                            return Err(SchemaError::UnterminatedString {
+                                location: Location { start, end: self.offset() },
+                            });
+                        }
+                    }
+                };
+                TokenKind::Identifier(string)
+            },
+            Some('"') => {
+                let mut string = String::new();
+                loop {
+                    match self.chars.next() {
+                        Some('\"') => break,
+                        Some('\\') => {
+                            match self.chars.next() {
+                                Some('\"') => string.push('\"'),
+                                Some(char) => {
+                                    return Err(SchemaError::UnexpectedCharacter {
+                                        text: char.to_string(),
+                                        location: Location { start, end: self.offset() },
+                                    });
+                                }
+                                None => {
+                                    return Err(SchemaError::UnterminatedString {
+                                        location: Location { start, end: self.offset() },
+                                    });
+                                }
+                            }
+                        },
+                        Some(char) => string.push(char),
+                        None => {
+                            return Err(SchemaError::UnterminatedString {
+                                location: Location { start, end: self.offset() },
+                            });
+                        }
+                    }
+                };
+                TokenKind::Identifier(string)
+            },
             Some(char) if self.is_identifier(char) => {
                 let mut identifier = char.to_string();
                 loop {
@@ -53,7 +115,7 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 TokenKind::Identifier(identifier)
-            }
+            },
             Some(' ') => return self.read_next_token(),
             Some('\n') => return self.read_next_token(),
             Some(char) => return Err(SchemaError::UnexpectedCharacter {

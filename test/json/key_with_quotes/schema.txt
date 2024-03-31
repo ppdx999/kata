@@ -1,0 +1,6 @@
+{
+  "special char can write with double quote": null,
+  'single quote also can write': null,
+  "excape \" double quote": null,
+  'escape \' single quote': null
+}

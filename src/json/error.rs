@@ -31,6 +31,11 @@ pub enum SchemaError {
         type_: String,
         location: Location,
     },
+
+    #[error("Error: Unterminated string found at {location}")]
+    UnterminatedString {
+        location: Location,
+    },
 }
 
 #[derive(Error, Debug, PartialEq)]
