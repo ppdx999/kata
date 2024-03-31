@@ -1,6 +1,12 @@
 # schematch
 Declarative schema checking commands
 
+## Installation
+
+```terminal
+cargo install schematch
+```
+
 ## Usage
 
 ```txt
