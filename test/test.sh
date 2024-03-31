@@ -73,6 +73,7 @@ run_test $test_dir/tsv/primitive/float_invalid
 run_test $test_dir/tsv/primitive/null
 run_test $test_dir/tsv/multi_term_multi_column
 run_test $test_dir/tsv/sum_type
+run_test $test_dir/tsv/multiline_schema
 
 run_test $test_dir/tsv/multi_data_type_mismatch_error
 run_test $test_dir/tsv/field_number_mismatch_error

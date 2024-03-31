@@ -1,0 +1,4 @@
+id:integer
+email:string
+is_active:boolean
+name:string|null
