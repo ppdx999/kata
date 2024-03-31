@@ -20,7 +20,6 @@ impl fmt::Display for SchemaType {
 #[command(name = "schematch", version, author, about = "Declarative schema checking commands")]
 pub struct Cli {
     /// The schema to check against.
-    /// ex. "id:integer email:string name:string"
     pub schema: String,
     /// The file to check. If not provided, stdin will be used.
     pub file: Option<String>,
